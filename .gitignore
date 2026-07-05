@@ -43,6 +43,9 @@ Thumbs.db
 ehthumbs.db
 Desktop.ini
 
+# Tooling
+.opencode/
+
 # Misc
 .cache/
 .turbo/
