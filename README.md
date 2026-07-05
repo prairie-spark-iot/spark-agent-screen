@@ -2,6 +2,8 @@
 
 # ⚡ Spark IoT AI Diagnostic Agent
 
+**English** | [中文](README.zh.md)
+
 ### Industrial AI Telemetry Diagnostic & RAG-Powered Remediation Platform  
 *(工业智能物联网故障推理与自适应修复诊断系统)*
 
