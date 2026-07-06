@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Alert, Severity } from '../types';
 import { useTranslation } from '../i18n/context';
 import { Button } from '@/components/ui/button';
@@ -25,6 +25,10 @@ export default function AlertsView({
   const [activeSeverityTab, setActiveSeverityTab] = useState<'All' | Severity>('All');
   const [localSearch, setLocalSearch] = useState('');
   const [timeRange, setTimeRange] = useState<'24h' | '1h' | '7d' | 'all'>('24h');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => { setPage(1); }, [activeSeverityTab, localSearch, timeRange]);
 
   const cycleTimeRange = () => {
     const order: Array<'24h' | '1h' | '7d' | 'all'> = ['24h', '1h', '7d', 'all'];
@@ -86,6 +90,9 @@ export default function AlertsView({
       return true;
     });
   }, [alerts, activeSeverityTab, localSearch]);
+
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / pageSize));
 
   return (
     <div className="space-y-6">
@@ -156,6 +163,11 @@ export default function AlertsView({
       <AlertsTable
         alerts={alerts}
         filteredAlerts={filteredAlerts}
+        totalFilteredCount={filteredAlerts.length}
+        page={page}
+        pageSize={pageSize}
+        totalPages={totalPages}
+        onPageChange={setPage}
         onNavigate={onNavigate}
         onDiagnose={onDiagnose}
       />
