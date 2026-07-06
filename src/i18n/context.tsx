@@ -344,6 +344,10 @@ export const translations: Translations = {
     en: "Metric Name *",
     zh: "指标名称 *"
   },
+  fieldRequired: {
+    en: "This field is required",
+    zh: "此字段为必填项"
+  },
   initialValue: {
     en: "Initial Value",
     zh: "初始值"

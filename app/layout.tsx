@@ -1,7 +1,9 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { Inter, JetBrains_Mono } from 'next/font/google';
+import { Toaster } from 'sonner';
 import { I18nProvider } from '@/src/i18n/context';
+import { QueryProvider } from '@/src/providers/QueryProvider';
 import './globals.css';
 
 const inter = Inter({
@@ -33,9 +35,23 @@ export default function RootLayout({
         />
       </head>
       <body className="bg-[#0B0E14] text-[#e0e2ec] antialiased overflow-hidden selection:bg-[#00cfbf]/30 selection:text-[#00cfbf]">
-        <I18nProvider>
-          {children}
-        </I18nProvider>
+        <QueryProvider>
+          <I18nProvider>
+            {children}
+          </I18nProvider>
+        </QueryProvider>
+        <Toaster
+          theme="dark"
+          position="bottom-right"
+          toastOptions={{
+            style: {
+              background: '#161a25',
+              border: '1px solid rgba(0,207,191,0.4)',
+              color: '#e0e2ec',
+              boxShadow: '0 0 20px rgba(0,207,191,0.25)',
+            },
+          }}
+        />
       </body>
     </html>
   );

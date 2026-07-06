@@ -1,4 +1,6 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useState, useCallback } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Alert, Device, Doc } from './types';
 import DashboardView from './components/DashboardView';
 import DevicesView from './components/DevicesView';
@@ -10,7 +12,10 @@ import { Sidebar, TopNavbar, MobileBottomNav, SystemInfoModal } from './componen
 import { LoginView } from './components/LoginView';
 import { useTranslation } from './i18n/context';
 import sparkLogo from './assets/images/spark_logo_1783157836702.jpg';
-import { initialAlerts, initialDevices, initialDocuments } from '@/lib/db';
+import { useDevices, useAddDevice, useUpdateDeviceStatusLocal, addFallbackDeviceToCache } from '@/src/features/devices/hooks';
+import { useAlerts, useDiagnoseAlert, useApproveAlertAction, useAutoDiagnoseAllAlerts } from '@/src/features/alerts/hooks';
+import { useDocuments, useAddDocumentLocal } from '@/src/features/knowledge/hooks';
+import { useTelemetrySync } from '@/src/features/telemetry/hooks';
 
 const logoSrc = typeof sparkLogo === 'object' && sparkLogo && 'src' in sparkLogo 
   ? (sparkLogo as any).src 
@@ -21,19 +26,26 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [selectedAlertId, setSelectedAlertId] = useState<string | null>(null);
 
-  // Database state initialized with client defaults immediately so UI never blocks
-  const [alerts, setAlerts] = useState<Alert[]>(() => initialAlerts());
-  const [devices, setDevices] = useState<Device[]>(() => initialDevices());
-  const [documents, setDocuments] = useState<Doc[]>(() => initialDocuments());
+  // Devices, alerts, and documents are all sourced from the shared telemetry-sync React Query
+  // cache (src/features/*) — no local state mirrors needed. React Query dedupes the underlying
+  // fetch across these hooks since they share the same query key.
+  const queryClient = useQueryClient();
+  const { devices } = useDevices();
+  const addDeviceMutation = useAddDevice();
+  const updateDeviceStatusLocal = useUpdateDeviceStatusLocal();
+
+  const { alerts } = useAlerts();
+  const diagnoseAlertMutation = useDiagnoseAlert();
+  const approveAlertActionMutation = useApproveAlertAction();
+  const autoDiagnoseAllAlertsMutation = useAutoDiagnoseAllAlerts();
+
+  const { documents } = useDocuments();
+  const addDocumentLocal = useAddDocumentLocal();
+
+  const { isLoading: loading, isError, error: queryError, refetch } = useTelemetrySync();
 
   // Page level state
   const [diagnosingAll, setDiagnosingAll] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  // Notification popup state
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationMsg, setNotificationMsg] = useState('');
 
   // Info modal state
   const [showInfoModal, setShowInfoModal] = useState(false);
@@ -65,118 +77,21 @@ export default function App() {
     }
   };
 
-  const parseResponseJson = async <T,>(res: Response): Promise<T> => {
-    const text = await res.text();
-    if (!text || !text.trim()) {
-      throw new Error('Empty response from server');
-    }
-    return JSON.parse(text) as T;
-  };
-
-  // Fetch initial system state from Express Backend with retry and fallback
-  const fetchData = async (silent = false, retries = 2): Promise<void> => {
-    if (!silent && alerts.length === 0) setLoading(true);
-    try {
-      let alertsData: Alert[];
-      let devicesData: Device[];
-      let docsData: Doc[];
-
-      if (silent) {
-        // API Batching: Single stream sync endpoint to reduce network overhead
-        const syncRes = await fetch('/api/telemetry/sync');
-        if (!syncRes.ok) throw new Error('Telemetry sync failed');
-        const syncData = await parseResponseJson<{ alerts: Alert[]; devices: Device[]; documents: Doc[] }>(syncRes);
-        alertsData = syncData.alerts;
-        devicesData = syncData.devices;
-        docsData = syncData.documents;
-      } else {
-        const [alertsRes, devicesRes, docsRes] = await Promise.all([
-          fetch('/api/alerts'),
-          fetch('/api/devices'),
-          fetch('/api/documents')
-        ]);
-
-        if (!alertsRes.ok || !devicesRes.ok || !docsRes.ok) {
-          throw new Error('Server returned an error while fetching telemetry data.');
-        }
-
-        [alertsData, devicesData, docsData] = await Promise.all([
-          parseResponseJson<Alert[]>(alertsRes),
-          parseResponseJson<Device[]>(devicesRes),
-          parseResponseJson<Doc[]>(docsRes)
-        ]);
-      }
-
-      // The engine is now the single source of truth for both alerts and devices (when
-      // BACKEND_SOURCE_*=engine) — no client-side merge/cache needed to preserve in-flight
-      // state across polls, since diagnosisRequestedAt/diagnosisTime already correctly derive
-      // "Diagnosing" server-side. The old spark_ai_local_diagnoses localStorage cache existed
-      // to compensate for the mock's non-durable in-memory storage; now that diagnoses are
-      // persisted in Postgres, keeping that cache around risked showing stale locally-cached
-      // data instead of real backend state, so it's been removed rather than carried forward.
-      setAlerts(alertsData);
-      setDevices(devicesData);
-      setDocuments(docsData);
-      setError(null);
-    } catch (err: any) {
-      console.warn('API sync attempt failed:', err);
-      if (retries > 0) {
-        await new Promise(resolve => setTimeout(resolve, 800));
-        return fetchData(silent, retries - 1);
-      }
-      setError(null);
-    } finally {
-      if (!silent) setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-
-    // Set up smart polling with Page Visibility API check
-    const interval = setInterval(() => {
-      // Don't poll when page is hidden in background tab to save CPU and network
-      if (!document.hidden) {
-        fetchData(true);
-      }
-    }, 4000);
-
-    // Immediately refresh telemetry when user switches back to this browser tab
-    const handleVisibilityChange = () => {
-      if (!document.hidden) {
-        fetchData(true);
-      }
-    };
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-
-    return () => {
-      clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
-  }, []);
-
   // 1. Diagnose single alert handler
   const handleDiagnose = async (alertId: string) => {
-    // Set immediate client state for UX
-    setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'Diagnosing' } : a));
-    
     // Switch to detail view so user can watch live reasoning compilation!
     setSelectedAlertId(alertId);
     setActiveTab('diagnosis-detail');
 
     try {
-      const res = await fetch(`/api/alerts/diagnose/${alertId}`, { method: 'POST' });
-      if (!res.ok) throw new Error('Diagnosis request failed.');
-      const updatedAlert = await parseResponseJson<Alert>(res);
-
-      // Update alerts state — status will be "Diagnosing"; the real diagnosis (rootCause,
-      // timeline, etc.) arrives via the existing 4s poll once the engine's single-concurrency
-      // Ollama consumer actually completes the LLM call, not synchronously from this request.
-      setAlerts(prev => prev.map(a => a.id === alertId ? updatedAlert : a));
+      // The mutation's onMutate already sets status to "Diagnosing" optimistically; the real
+      // diagnosis (rootCause, timeline, etc.) arrives via the existing 4s poll once the engine's
+      // single-concurrency Ollama consumer actually completes the LLM call, not synchronously
+      // from this request.
+      const updatedAlert = await diagnoseAlertMutation.mutateAsync(alertId);
       triggerNotification(`Diagnosis started for ${updatedAlert.device} — results will appear shortly.`);
     } catch (err: any) {
       console.error(err);
-      setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'Pending' } : a));
       triggerNotification(`Error: Failed to start AI diagnosis.`);
     }
   };
@@ -184,11 +99,7 @@ export default function App() {
   // 2. Approve action plan handler
   const handleApproveAction = async (alertId: string) => {
     try {
-      const res = await fetch(`/api/alerts/approve-action/${alertId}`, { method: 'POST' });
-      if (!res.ok) throw new Error('Failed to approve action plan.');
-      const updatedAlert = await parseResponseJson<Alert>(res);
-
-      setAlerts(prev => prev.map(a => a.id === alertId ? updatedAlert : a));
+      await approveAlertActionMutation.mutateAsync(alertId);
       triggerNotification(`Action plan approved.`);
     } catch (err: any) {
       console.error(err);
@@ -201,12 +112,7 @@ export default function App() {
     setDiagnosingAll(true);
     triggerNotification('Diagnosis requests sent for all pending alerts...');
     try {
-      const res = await fetch('/api/alerts/auto-diagnose-all', { method: 'POST' });
-      if (!res.ok) throw new Error('Auto-diagnose all failed.');
-      const data = await parseResponseJson<any>(res);
-      const updatedAlerts: Alert[] = data.alerts || data;
-
-      setAlerts(updatedAlerts);
+      await autoDiagnoseAllAlertsMutation.mutateAsync();
       triggerNotification('Diagnosis started for all pending alerts — results will appear shortly.');
     } catch (err: any) {
       console.error(err);
@@ -228,15 +134,7 @@ export default function App() {
     try {
       let newDev: Device;
       try {
-        const res = await fetch('/api/devices', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(deviceData)
-        });
-        if (!res.ok) throw new Error('Failed to append custom node.');
-        newDev = await parseResponseJson<Device>(res);
+        newDev = await addDeviceMutation.mutateAsync(deviceData);
       } catch (apiErr) {
         newDev = {
           id: `dev-${Date.now()}`,
@@ -249,9 +147,9 @@ export default function App() {
           sparkline: Array(9).fill(parseFloat(deviceData.initialValue) || 0),
           icon: 'router'
         };
+        addFallbackDeviceToCache(queryClient, newDev);
       }
 
-      setDevices(prev => [...prev, newDev]);
       triggerNotification(`Node "${newDev.name}" successfully provisioned at ${newDev.location}.`);
     } catch (err: any) {
       console.error(err);
@@ -260,22 +158,13 @@ export default function App() {
   };
 
   const handleUpdateDeviceStatus = useCallback((deviceId: string, newStatus: 'ONLINE' | 'OFFLINE' | 'WARNING') => {
-    setDevices(prev => prev.map(d => {
-      if (d.id === deviceId) {
-        return { ...d, status: newStatus };
-      }
-      return d;
-    }));
+    updateDeviceStatusLocal(deviceId, newStatus);
     triggerNotification(`Transceiver ${deviceId} status updated to ${newStatus}.`);
-  }, []);
+  }, [updateDeviceStatusLocal]);
 
   // Utility helper for toast notification
   const triggerNotification = (msg: string) => {
-    setNotificationMsg(msg);
-    setShowNotification(true);
-    setTimeout(() => {
-      setShowNotification(false);
-    }, 5000);
+    toast(msg);
   };
 
   // Navigation handler helper
@@ -295,22 +184,8 @@ export default function App() {
 
   return (
     <div className="flex h-[100dvh] w-screen bg-[#0B0E14] text-[#e0e2ec] font-sans overflow-hidden">
-      
-      {/* Toast Notification */}
-      {showNotification && (
-        <div className="fixed bottom-5 right-5 bg-surface-container border border-[#00cfbf]/40 text-white px-5 py-3 rounded-lg shadow-2xl z-50 flex items-center gap-3 animate-slide-in shadow-[0_0_20px_rgba(0,207,191,0.25)]">
-          <span className="material-symbols-outlined text-[#00cfbf]">notifications_active</span>
-          <p className="font-sans text-xs font-semibold">{notificationMsg}</p>
-          <button 
-            onClick={() => setShowNotification(false)}
-            className="text-[#b9cacb] hover:text-white transition-colors cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-sm">close</span>
-          </button>
-        </div>
-      )}
 
-      <SystemInfoModal 
+      <SystemInfoModal
         open={showInfoModal} 
         onOpenChange={setShowInfoModal} 
       />
@@ -324,8 +199,7 @@ export default function App() {
           setActiveNodeLabel(nodeLabel);
           setShowNodeModal(false);
           const translatedNode = nodeLabel.startsWith('sysNode') ? t(nodeLabel) : nodeLabel;
-          setNotificationMsg(t('nodeSwitchSuccess', { node: translatedNode }));
-          setShowNotification(true);
+          toast(t('nodeSwitchSuccess', { node: translatedNode }));
         }}
       />
 
@@ -364,15 +238,17 @@ export default function App() {
               <h3 className="font-sans text-sm font-semibold text-[#e0e2ec]">{t('connectingToGateway')}</h3>
               <p className="text-[#b9cacb] text-xs mt-1">{t('syncingBuffers')}</p>
             </div>
-          ) : error ? (
+          ) : isError ? (
             <div className="flex flex-col items-center justify-center h-full py-20 text-center max-w-md mx-auto space-y-4">
               <span className="material-symbols-outlined text-4xl text-[#ffb4ab]">error</span>
               <div>
                 <h3 className="font-sans text-base font-bold text-[#ffb4ab]">{t('syncOffline')}</h3>
-                <p className="text-[#b9cacb] text-xs mt-1 leading-relaxed">{error}</p>
+                <p className="text-[#b9cacb] text-xs mt-1 leading-relaxed">
+                  {queryError instanceof Error ? queryError.message : 'Unable to reach the telemetry gateway.'}
+                </p>
               </div>
-              <button 
-                onClick={() => fetchData()}
+              <button
+                onClick={() => refetch()}
                 className="px-4 py-2 bg-[#222630] border border-[#222630] rounded text-xs hover:bg-[#2d323f] transition-all cursor-pointer font-sans"
               >
                 {t('retrySync')}
@@ -420,9 +296,8 @@ export default function App() {
                 <KnowledgeBaseView 
                   documents={documents}
                   onAddDoc={(newDoc) => {
-                    setDocuments(prev => [newDoc, ...prev]);
-                    setNotificationMsg(t('uploadSuccessMsg'));
-                    setShowNotification(true);
+                    addDocumentLocal(newDoc);
+                    toast(t('uploadSuccessMsg'));
                   }}
                 />
               )}
