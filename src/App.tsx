@@ -10,7 +10,7 @@ import { Sidebar, TopNavbar, MobileBottomNav, SystemInfoModal } from './componen
 import { LoginView } from './components/LoginView';
 import { useTranslation } from './i18n/context';
 import sparkLogo from './assets/images/spark_logo_1783157836702.jpg';
-import { initialAlerts, initialDevices, initialDocuments, generateHeuristicDiagnosis } from '@/lib/db';
+import { initialAlerts, initialDevices, initialDocuments } from '@/lib/db';
 
 const logoSrc = typeof sparkLogo === 'object' && sparkLogo && 'src' in sparkLogo 
   ? (sparkLogo as any).src 
@@ -107,44 +107,15 @@ export default function App() {
         ]);
       }
 
-      // Local persistence recovery: Restore locally cached approved diagnoses
-      const localCacheStr = localStorage.getItem('spark_ai_local_diagnoses');
-      const localCache: Record<string, any> = localCacheStr ? JSON.parse(localCacheStr) : {};
-
-      if (silent) {
-        // Smart Delta Merge: Preserve active UI focus & ongoing diagnosis workflows
-        setAlerts(prevAlerts => {
-          return alertsData.map(newAlert => {
-            const existing = prevAlerts.find(a => a.id === newAlert.id);
-            const cachedDiag = localCache[newAlert.id];
-            if (!existing) return cachedDiag ? { ...newAlert, status: 'Diagnosed', diagnosis: cachedDiag } : newAlert;
-            if (existing.status === 'Diagnosing') {
-              return { ...newAlert, status: 'Diagnosing', diagnosis: existing.diagnosis };
-            }
-            if (existing.status === 'Diagnosed' && existing.diagnosis) {
-              return {
-                ...newAlert,
-                status: 'Diagnosed',
-                diagnosis: {
-                  ...existing.diagnosis,
-                  approved: existing.diagnosis.approved || newAlert.diagnosis?.approved
-                }
-              };
-            }
-            return cachedDiag ? { ...newAlert, status: 'Diagnosed', diagnosis: cachedDiag } : newAlert;
-          });
-        });
-
-        setDevices(prevDevices => {
-          return devicesData.map(newDev => {
-            const existing = prevDevices.find(d => d.id === newDev.id);
-            return existing ? { ...existing, value: newDev.value, status: newDev.status, sparkline: newDev.sparkline } : newDev;
-          });
-        });
-      } else {
-        setAlerts(alertsData.map(a => localCache[a.id] ? { ...a, status: 'Diagnosed', diagnosis: localCache[a.id] } : a));
-        setDevices(devicesData);
-      }
+      // The engine is now the single source of truth for both alerts and devices (when
+      // BACKEND_SOURCE_*=engine) — no client-side merge/cache needed to preserve in-flight
+      // state across polls, since diagnosisRequestedAt/diagnosisTime already correctly derive
+      // "Diagnosing" server-side. The old spark_ai_local_diagnoses localStorage cache existed
+      // to compensate for the mock's non-durable in-memory storage; now that diagnoses are
+      // persisted in Postgres, keeping that cache around risked showing stale locally-cached
+      // data instead of real backend state, so it's been removed rather than carried forward.
+      setAlerts(alertsData);
+      setDevices(devicesData);
       setDocuments(docsData);
       setError(null);
     } catch (err: any) {
@@ -184,14 +155,6 @@ export default function App() {
     };
   }, []);
 
-  const updateLocalDiagCache = (id: string, diag: any) => {
-    try {
-      const cached = JSON.parse(localStorage.getItem('spark_ai_local_diagnoses') || '{}');
-      cached[id] = diag;
-      localStorage.setItem('spark_ai_local_diagnoses', JSON.stringify(cached));
-    } catch {}
-  };
-
   // 1. Diagnose single alert handler
   const handleDiagnose = async (alertId: string) => {
     // Set immediate client state for UX
@@ -202,109 +165,52 @@ export default function App() {
     setActiveTab('diagnosis-detail');
 
     try {
-      let updatedAlert: Alert;
-      try {
-        const res = await fetch(`/api/alerts/diagnose/${alertId}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ language })
-        });
-        if (!res.ok) throw new Error('Diagnosis compilation failed.');
-        updatedAlert = await parseResponseJson<Alert>(res);
-      } catch (apiErr) {
-        // Client fallback if offline or server restarting
-        const target = alerts.find(a => a.id === alertId);
-        if (!target) throw apiErr;
-        updatedAlert = {
-          ...target,
-          status: 'Diagnosed',
-          diagnosis: generateHeuristicDiagnosis(target)
-        };
-      }
-      
-      if (updatedAlert.diagnosis) {
-        updateLocalDiagCache(alertId, updatedAlert.diagnosis);
-      }
+      const res = await fetch(`/api/alerts/diagnose/${alertId}`, { method: 'POST' });
+      if (!res.ok) throw new Error('Diagnosis request failed.');
+      const updatedAlert = await parseResponseJson<Alert>(res);
 
-      // Update alerts state with diagnosed report
+      // Update alerts state — status will be "Diagnosing"; the real diagnosis (rootCause,
+      // timeline, etc.) arrives via the existing 4s poll once the engine's single-concurrency
+      // Ollama consumer actually completes the LLM call, not synchronously from this request.
       setAlerts(prev => prev.map(a => a.id === alertId ? updatedAlert : a));
-      triggerNotification(`AI successfully compiled diagnostic reasoning for ${updatedAlert.device}!`);
+      triggerNotification(`Diagnosis started for ${updatedAlert.device} — results will appear shortly.`);
     } catch (err: any) {
       console.error(err);
       setAlerts(prev => prev.map(a => a.id === alertId ? { ...a, status: 'Pending' } : a));
-      triggerNotification(`Error: Failed to perform AI diagnosis on node.`);
+      triggerNotification(`Error: Failed to start AI diagnosis.`);
     }
   };
 
   // 2. Approve action plan handler
   const handleApproveAction = async (alertId: string) => {
     try {
-      let updatedAlert: Alert;
-      try {
-        const res = await fetch(`/api/alerts/approve-action/${alertId}`, {
-          method: 'POST'
-        });
-        if (!res.ok) throw new Error('Failed to dispatch action plan.');
-        updatedAlert = await parseResponseJson<Alert>(res);
-      } catch (apiErr) {
-        const target = alerts.find(a => a.id === alertId);
-        if (!target) throw apiErr;
-        updatedAlert = {
-          ...target,
-          status: 'Diagnosed',
-          diagnosis: target.diagnosis ? { ...target.diagnosis, approved: true } : undefined
-        };
-      }
-
-      if (updatedAlert.diagnosis) {
-        updateLocalDiagCache(alertId, updatedAlert.diagnosis);
-      }
+      const res = await fetch(`/api/alerts/approve-action/${alertId}`, { method: 'POST' });
+      if (!res.ok) throw new Error('Failed to approve action plan.');
+      const updatedAlert = await parseResponseJson<Alert>(res);
 
       setAlerts(prev => prev.map(a => a.id === alertId ? updatedAlert : a));
-      triggerNotification(`Action plan approved. Micro-actuator commands successfully dispatched.`);
+      triggerNotification(`Action plan approved.`);
     } catch (err: any) {
       console.error(err);
-      triggerNotification(`Error: Failed to approve mechanical action plan.`);
+      triggerNotification(`Error: Failed to approve action plan.`);
     }
   };
 
   // 3. Bulk auto-diagnose pending alerts handler
   const handleAutoDiagnoseAll = async () => {
     setDiagnosingAll(true);
-    triggerNotification('Initiated parallel diagnostic reasoning pipelines...');
+    triggerNotification('Diagnosis requests sent for all pending alerts...');
     try {
-      let updatedAlerts: Alert[];
-      try {
-        const res = await fetch('/api/alerts/auto-diagnose-all', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ language })
-        });
-        if (!res.ok) throw new Error('Auto-diagnose all failed.');
-        const data = await parseResponseJson<any>(res);
-        updatedAlerts = data.alerts || data;
-      } catch (apiErr) {
-        updatedAlerts = alerts.map(a => {
-          if (a.status === 'Pending') {
-            return {
-              ...a,
-              status: 'Diagnosed' as const,
-              diagnosis: generateHeuristicDiagnosis(a)
-            };
-          }
-          return a;
-        });
-      }
-
-      updatedAlerts.forEach(a => {
-        if (a.diagnosis) updateLocalDiagCache(a.id, a.diagnosis);
-      });
+      const res = await fetch('/api/alerts/auto-diagnose-all', { method: 'POST' });
+      if (!res.ok) throw new Error('Auto-diagnose all failed.');
+      const data = await parseResponseJson<any>(res);
+      const updatedAlerts: Alert[] = data.alerts || data;
 
       setAlerts(updatedAlerts);
-      triggerNotification('Successfully diagnosed all pending anomalies!');
+      triggerNotification('Diagnosis started for all pending alerts — results will appear shortly.');
     } catch (err: any) {
       console.error(err);
-      triggerNotification('Error while auto-diagnosing alerts.');
+      triggerNotification('Error while requesting auto-diagnosis.');
     } finally {
       setDiagnosingAll(false);
     }

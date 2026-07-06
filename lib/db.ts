@@ -1,4 +1,4 @@
-import { Alert, Device, Doc, DiagnosisReport } from "@/src/types";
+import { Alert, Device, Doc } from "@/src/types";
 
 // In-Memory Database State Initializers
 export const initialAlerts = (): Alert[] => [
@@ -258,6 +258,7 @@ declare global {
 
 export const db = {
   getAlerts: () => {
+    if (process.env.BACKEND_SOURCE_ALERT === 'engine') return globalThis._alerts || initialAlerts();
     if (!globalThis._alerts) {
       globalThis._alerts = initialAlerts();
     }
@@ -279,6 +280,10 @@ export const db = {
     if (!globalThis._devices) {
       globalThis._devices = initialDevices();
       
+      // When integrated with the live engine, never start the drift simulation.
+      // The engine owns device telemetry and alert generation.
+      if (process.env.BACKEND_SOURCE_DEVICE === 'engine') return globalThis._devices || initialDevices();
+
       // Start the dynamic drift and closed-loop alert simulation interval
       if (!globalThis._intervalId) {
         globalThis._driftCounters = {};
@@ -350,143 +355,10 @@ export const db = {
     globalThis._devices = newDevices;
   },
   getDocuments: () => {
+    if (process.env.BACKEND_SOURCE_DEVICE === 'engine') return globalThis._documents || initialDocuments();
     if (!globalThis._documents) {
       globalThis._documents = initialDocuments();
     }
     return globalThis._documents;
   }
 };
-
-export function generateHeuristicDiagnosis(alert: Alert, lang: string = 'en'): DiagnosisReport {
-  const isZh = lang === 'zh';
-  let rootCause = isZh ? '零部件磨损与参数漂移' : 'Component Drift';
-  let confidence = 85;
-  let timeline: any[] = [];
-  let suggestedActionPlan: any[] = [];
-
-  const deviceStr = alert.device || '';
-  const metricStr = alert.metric || '';
-
-  if (deviceStr.includes('Router') || metricStr.includes('Thermal')) {
-    rootCause = isZh ? '散热风扇轴承磨损故障导致热失控' : 'Cooling Fan Bearing Failure';
-    confidence = 94;
-    timeline = [
-      {
-        title: isZh ? '遥测数据遥感日志分析' : 'Collected telemetry context',
-        description: isZh
-          ? `热力学日志确认 CPU 封装温度在 15 分钟内自 65°C 攀升至 ${alert.triggerValue}。风扇转速传感器反馈转速自 4500 RPM 骤降至 1200 RPM。`
-          : `Thermal logs confirm CPU packaging temperature rose from 65°C to ${alert.triggerValue} over a 15-minute sequence. Fan tachometer reported RPM drop from 4500 to 1200.`,
-        metrics: [
-          { label: isZh ? 'CPU 封装温度' : 'CPU Temp', value: alert.triggerValue, status: 'error' },
-          { label: isZh ? '风扇转速' : 'Fan Speed', value: '1200 RPM', status: 'error' }
-        ]
-      },
-      {
-        title: isZh ? '调阅设备维护规程与知识库' : 'Retrieved relevant knowledge docs',
-        description: isZh ? '将实时波形异常与技术维护手册规范进行对比检索。' : 'Correlated telemetry against technical manuals.',
-        docs: ['Thermal_Runaway_Protocol_A.pdf', 'Equipment_Router_Spec.pdf']
-      },
-      {
-        title: isZh ? 'AI 根因推演与综合评估' : 'AI Synthesis',
-        description: isZh
-          ? '温升曲线与转速降幅形成负相关，确诊内部无刷风扇轴承机械润滑失效，主控自动触发降频保护机制。'
-          : 'Thermal levels indicate fan bearing failure. Internal cooling is insufficient. System automatically reduced clock rates to prevent silicon damage.'
-      }
-    ];
-    suggestedActionPlan = [
-      { id: 'ap-r-1', text: isZh ? '安排 E1 路由工区停机维护计划窗口' : 'Schedule maintenance shutdown on routing segment E1', completed: false },
-      { id: 'ap-r-2', text: isZh ? '更换备用内部无刷散热风扇总成 (型号: BF-450)' : 'Replace secondary internal brushless fan assembly', completed: false },
-      { id: 'ap-r-3', text: isZh ? '重启并验证高温警报解除，确保工作温度稳定低于 70°C' : 'Confirm thermal values drop below 70°C after reboot', completed: false }
-    ];
-  } else if (deviceStr.includes('Gateway') || metricStr.includes('Login')) {
-    rootCause = isZh ? '自动撞库攻击与高并发异常认证请求' : 'Automated Credential Stuffing Attack';
-    confidence = 96;
-    timeline = [
-      {
-        title: isZh ? '边侧流量深度审计' : 'Traffic inspection logging',
-        description: isZh
-          ? `认证安全日志监测到瞬时失败登录频次飙升至 ${alert.triggerValue}，源自 12 个海外不同 IP 网段（欧/亚子网）。`
-          : `Authentication logs flag a surge to ${alert.triggerValue} concurrent failures across 12 distributed IP subnets (EU/Asia).`,
-        metrics: [
-          { label: isZh ? '登录请求速率' : 'Login Rate', value: alert.triggerValue, status: 'error' },
-          { label: isZh ? '异常源 IP 数量' : 'IP Sources', value: '142 unique', status: 'warning' }
-        ]
-      },
-      {
-        title: isZh ? '特征库与策略安全匹配' : 'Security policy match',
-        description: isZh ? '触发工控边界防护限流规则库。' : 'Matched signature rules on rate thresholds.',
-        docs: ['Brute_Force_Mitigation_Procedure_2024.pdf']
-      },
-      {
-        title: isZh ? 'AI 根因推演与综合评估' : 'AI Synthesis',
-        description: isZh
-          ? '检测到高频分布式暴力尝试破解网关账户，已自动激活动态滑动挑战与临时源地址封禁策略。'
-          : 'High frequency brute force detected on user account endpoints. Initiating temporary rate limits and cloudflare challenge rules.'
-      }
-    ];
-    suggestedActionPlan = [
-      { id: 'ap-sec-1', text: isZh ? '全量开启网关端点的强制 CAPTCHA 人机交互校验' : 'Trigger mandatory CAPTCHA challenges for all gateway endpoints', completed: true },
-      { id: 'ap-sec-2', text: isZh ? '调用防火墙策略临时下发 Top 5 恶意子网黑名单' : 'Temporarily block the top 5 offending IP subnets', completed: false },
-      { id: 'ap-sec-3', text: isZh ? '持续观测认证请求衰减趋势并生成审计报告' : 'Monitor auth log statistics for signature attenuation', completed: false }
-    ];
-  } else if (deviceStr.includes('Sensor') || metricStr.includes('Packet') || deviceStr.includes('Lathe')) {
-    rootCause = isZh ? '动力线缆电磁干扰 (EMI) 与接地屏蔽层老化' : 'EMI (Electromagnetic Interference) on Cable Shielding';
-    confidence = 88;
-    timeline = [
-      {
-        title: isZh ? '传输链路信号完整性分析' : 'Signal Integrity Analysis',
-        description: isZh
-          ? '主通信总线上监测到 CRC 校验错误率突增，传输阻抗出现明显波动。'
-          : 'Detected rise in CRC errors and line impedance values on the primary transceiver wire.',
-        metrics: [
-          { label: isZh ? '丢包率 / 抖动' : 'Packet Loss', value: alert.triggerValue, status: 'warning' },
-          { label: isZh ? 'CRC 报错频次' : 'CRC Errors', value: '1420 /min', status: 'error' }
-        ]
-      },
-      {
-        title: isZh ? '工业时序波形相关性对齐' : 'Knowledge correlation',
-        description: isZh ? '将数控机床主轴震动周期与总线误码率进行交叉验证。' : 'Compared logs against previous incidents near the CNC line.'
-      },
-      {
-        title: isZh ? 'AI 根因推演与综合评估' : 'AI Synthesis',
-        description: isZh
-          ? '数控车床进给震动峰值与数据丢包时间窗 100% 吻合，判断强电磁脉冲穿透了附近老化的通信排线屏蔽层。'
-          : 'Vibration cycles of CNC Lathe 02 correlate precisely with packet loss spikes, indicating shielding degradation on nearby signal run.'
-      }
-    ];
-    suggestedActionPlan = [
-      { id: 'ap-sen-1', text: isZh ? '检查并紧固 12 号传感器阵列的同轴外壳接地夹钳' : 'Inspect and secure coaxial grounding clamps on Sensor-Array-12', completed: false },
-      { id: 'ap-sen-2', text: isZh ? '将低压数据线桥架重新铺设至距离动力主线缆 2 米以外' : 'Reroute cabling 2 meters away from CNC power cables', completed: false }
-    ];
-  } else {
-    rootCause = isZh ? '设备工作参数缓变漂移与基准超出' : 'Unspecified Sensor Calibration Drift';
-    confidence = 82;
-    timeline = [
-      {
-        title: isZh ? '异常触发快照采集' : 'Collected telemetry context',
-        description: isZh ? `系统自动检测到 ${alert.metric} 达到触发阈值 ${alert.triggerValue}。` : `System flag triggered on ${alert.metric} at ${alert.triggerValue}.`,
-        metrics: [
-          { label: isZh ? '实时数值' : 'Value', value: alert.triggerValue, status: 'warning' }
-        ]
-      },
-      {
-        title: isZh ? 'AI 根因推演与综合评估' : 'AI Synthesis',
-        description: isZh
-          ? `启发式工程推理表明该节点传感器需进行零点复位，当前参数已渐进超出安全范围 (${alert.threshold})。`
-          : `Heuristic analysis suggests a localized sensor recalibration is required. Metric has drifted slightly above acceptable threshold ${alert.threshold}.`
-      }
-    ];
-    suggestedActionPlan = [
-      { id: 'ap-d-1', text: isZh ? '远程下发传感器零点自校准与偏置补偿指令' : 'Perform remote sensor self-calibration sequence', completed: false },
-      { id: 'ap-d-2', text: isZh ? '持续复核 5 个采样周期，确保数值稳态回归到安全阈值内' : 'Verify metric returns to nominal threshold', completed: false }
-    ];
-  }
-
-  return {
-    rootCause,
-    confidence,
-    timeline,
-    suggestedActionPlan,
-    approved: false
-  };
-}
