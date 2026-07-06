@@ -2,5 +2,5 @@
   "name": "Spark IoT Agent",
   "description": "An advanced industrial IoT monitor dashboard with AI-powered diagnostic anomaly reasoning and telematic analytics.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": []
 }
