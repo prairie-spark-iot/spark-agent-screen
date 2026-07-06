@@ -1,48 +1,43 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { db } from '@/lib/db';
+import { EngineAlert, mapEngineAlertToUiAlert } from '@/lib/adapters/alertAdapter';
 
+/**
+ * Proxies to the engine's POST /api/alerts/{id}/approve. Unlike the old mock, this does NOT
+ * reset the device to nominal values — the mock's "closed-loop physical remediation" was a
+ * simulation only; whether approving an action plan should issue a real device command is an
+ * open product question (flagged in frontend-backend-integration-strategy.md §2) that hasn't
+ * been decided, so it isn't implemented here. Approving now only marks the alert handled
+ * (handleStatus=1) and records approvedAt — the device's live telemetry is unaffected and will
+ * only change once the physical/simulated device itself reports a different value.
+ */
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ alertId: string }> }
 ) {
   const { alertId } = await params;
-  const currentAlerts = db.getAlerts();
-  const alertIndex = currentAlerts.findIndex(a => a.id === alertId);
+  const baseUrl = process.env.BACKEND_ENGINE_URL;
 
-  if (alertIndex === -1) {
-    return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
-  }
+  try {
+    const res = await fetch(`${baseUrl}/api/alerts/${alertId}/approve`, { method: 'POST' });
 
-  const alert = currentAlerts[alertIndex];
-  if (!alert.diagnosis) {
-    return NextResponse.json({ error: 'Alert is not diagnosed yet' }, { status: 400 });
-  }
-
-  alert.diagnosis.approved = true;
-  alert.diagnosis.approvedAt = new Date().toISOString();
-  alert.diagnosis.suggestedActionPlan = alert.diagnosis.suggestedActionPlan.map(act => ({
-    ...act,
-    completed: true
-  }));
-
-  db.setAlerts(currentAlerts);
-
-  // Closed-loop physical remediation: Reset corresponding device status & metric back to nominal values
-  const devices = db.getDevices();
-  const updatedDevices = devices.map(dev => {
-    if (alert.device && (dev.name.toLowerCase() === alert.device.toLowerCase() || alert.device.toLowerCase().includes(dev.name.toLowerCase()) || dev.name.toLowerCase().includes(alert.device.toLowerCase()))) {
-      const nominalVal = dev.metricName === 'VIBRATION' ? '2.1' : dev.metricName === 'PRESSURE' ? '12.0' : dev.metricName === 'SPEED' ? '1.5' : dev.value;
-      const nextSpark = [...dev.sparkline.slice(1), parseFloat(nominalVal)];
-      return {
-        ...dev,
-        status: 'ONLINE' as const,
-        value: nominalVal,
-        sparkline: nextSpark
-      };
+    if (res.status === 404) {
+      return NextResponse.json({ error: 'Alert not found' }, { status: 404 });
     }
-    return dev;
-  });
-  db.setDevices(updatedDevices);
+    if (res.status === 409) {
+      return NextResponse.json({ error: 'Alert has not been diagnosed yet' }, { status: 409 });
+    }
+    if (!res.ok) {
+      throw new Error(`engine approve request returned ${res.status}`);
+    }
 
-  return NextResponse.json(alert);
+    const body: { code: number; msg: string; data: EngineAlert } = await res.json();
+    if (body.code !== 0) {
+      throw new Error(`engine approve error: ${body.msg}`);
+    }
+
+    return NextResponse.json(mapEngineAlertToUiAlert(body.data));
+  } catch (err) {
+    console.error('[BFF] approve-action request failed:', err);
+    return NextResponse.json({ error: 'Failed to approve action plan' }, { status: 502 });
+  }
 }
