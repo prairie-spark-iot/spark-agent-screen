@@ -9,6 +9,7 @@ declare global {
     interface ProcessEnv {
       BACKEND_SOURCE_DEVICE: 'engine' | 'mock';
       BACKEND_ENGINE_URL: string;
+      NEXT_PUBLIC_BACKEND_WS_URL: string;
       BACKEND_SOURCE_ALERT?: 'engine' | 'mock';
     }
   }
