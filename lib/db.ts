@@ -275,6 +275,7 @@ declare global {
   var _documents: Doc[] | undefined;
   var _intervalId: NodeJS.Timeout | undefined;
   var _driftCounters: Record<string, number> | undefined;
+  var _lastAlertTimestamps: Record<string, number> | undefined;
 }
 
 export const db = {
@@ -322,9 +323,17 @@ export const db = {
               let noise = (Math.random() - 0.48) * (val * 0.05); // slightly upward biased drift
               let newVal = Math.max(0.1, val + noise);
 
-              // Check drift limits for devices like CNC Lathe or Ventilation
-              const safeThreshold = dev.metricName === 'VIBRATION' ? 4.5 : dev.metricName === 'PRESSURE' ? 12.0 : 999;
-              if (newVal > safeThreshold) {
+              // Check drift limits per metric type
+              const safeThreshold: Record<string, number> = {
+                VIBRATION: 4.5,
+                PRESSURE: 12.0,
+                AIRFLOW: 2000,
+                TEMPERATURE: 120,
+                LOAD: 100,
+                CURRENT: 30,
+              };
+              const threshold = safeThreshold[dev.metricName] ?? 999;
+              if (newVal > threshold) {
                 globalThis._driftCounters[dev.id] = (globalThis._driftCounters[dev.id] || 0) + 1;
               } else {
                 globalThis._driftCounters[dev.id] = Math.max(0, (globalThis._driftCounters[dev.id] || 0) - 1);
@@ -336,7 +345,15 @@ export const db = {
                   a => (a.device === dev.name || a.device.includes(dev.name)) && (a.status === 'Pending' || a.status === 'Diagnosing')
                 );
 
-                if (!hasActiveAlert && globalThis._alerts) {
+                // Cooldown: prevent generating another alert for the same device within 30 seconds
+                if (!globalThis._lastAlertTimestamps) globalThis._lastAlertTimestamps = {};
+                const now = Date.now();
+                const lastAlertTime = globalThis._lastAlertTimestamps[dev.id] ?? 0;
+                const isCoolingDown = (now - lastAlertTime) < 30000;
+
+                if (!hasActiveAlert && !isCoolingDown && globalThis._alerts) {
+                  // Record alert generation time for cooldown
+                  globalThis._lastAlertTimestamps[dev.id] = now;
                   const newAlert: Alert = {
                     id: `alt-drift-${dev.id}-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
                     time: 'Just now',
@@ -344,7 +361,7 @@ export const db = {
                     device: dev.name,
                     metric: dev.metricName,
                     triggerValue: `${formatMetricValue(newVal, dev.metricName)} ${dev.unit}`,
-                    threshold: `${formatMetricValue(safeThreshold, dev.metricName)} ${dev.unit}`,
+                    threshold: `${formatMetricValue(threshold, dev.metricName)} ${dev.unit}`,
                     severity: 'Critical',
                     status: 'Pending',
                     details: `Automated closed-loop trigger: Continuous upward physical drift detected (${globalThis._driftCounters[dev.id]} consecutive anomaly cycles).`
