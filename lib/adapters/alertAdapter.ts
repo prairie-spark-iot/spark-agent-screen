@@ -27,6 +27,10 @@ export interface EngineAlert {
   ruleThreshold: string | null;
   diagnosisRequestedAt: string | null;
   approvedAt: string | null;
+  // BaseEntity.updateTime — present on WS pushes (AlertWsBridgeConsumer, DiagnosisAgentService
+  // writeBack), which serialize the raw AlertRecord entity; not present on GET /api/alert/recent
+  // today. Optional so both sources satisfy this interface.
+  updateTime?: string;
 }
 
 const SEVERITY_BY_LEVEL: Record<number, Severity> = {
@@ -135,5 +139,6 @@ export function mapEngineAlertToUiAlert(a: EngineAlert): Alert {
     status: deriveStatus(a),
     details: a.alertContent,
     diagnosis: mapDiagnosis(a),
+    updateTime: a.updateTime,
   };
 }

@@ -46,6 +46,44 @@ const PRODUCT_ICONS: Record<string, string> = {
 
 const DEFAULT_ICON = 'precision_manufacturing';
 
+// Reverse of TELEMETRY_LABELS — needed to map a live WS telemetry snapshot (keyed by the engine's
+// raw identifier, e.g. "temperature") back onto a Device already resolved to its display label
+// (e.g. "TEMPERATURE"), since the WS payload (TelemetryWsBridgeConsumer.TelemetrySnapshot) has no
+// productKey to redo the PRIMARY_METRIC_BY_PRODUCT lookup from scratch — reusing whichever
+// identifier is already the device's displayed metric is the only info available at merge time.
+const IDENTIFIER_BY_LABEL: Record<string, string> = Object.fromEntries(
+  Object.entries(TELEMETRY_LABELS).map(([identifier, label]) => [label, identifier])
+);
+
+export function identifierForMetricName(metricName: string): string {
+  return IDENTIFIER_BY_LABEL[metricName] ?? metricName.toLowerCase();
+}
+
+/**
+ * Merges one coalesced WS telemetry snapshot (one device, all properties that changed within the
+ * engine's ~400ms coalescing window) onto a cached Device. Only touches value/sparkline for the
+ * device's already-resolved primary identifier — if that identifier isn't part of this particular
+ * snapshot (a different property on the same device changed instead), the device is returned
+ * unchanged (same reference) so callers/memoization can no-op.
+ */
+export function applyTelemetrySnapshot(
+  device: Device,
+  snapshot: { properties: Record<string, unknown> }
+): Device {
+  const identifier = identifierForMetricName(device.metricName);
+  const raw = snapshot.properties[identifier];
+  if (raw === undefined || raw === null) return device;
+
+  const numericValue = typeof raw === 'number' ? raw : parseFloat(String(raw));
+  if (!Number.isFinite(numericValue)) return device;
+
+  return {
+    ...device,
+    value: String(raw),
+    sparkline: [...device.sparkline.slice(1), numericValue],
+  };
+}
+
 // The live engine returns telemetry[] ordered alphabetically by identifier (an artifact of the
 // underlying query, not a semantic ordering) — e.g. an injection molder returns
 // [current, pressure, temperature]. Blindly taking telemetry[0] headlines the wrong metric
