@@ -31,6 +31,23 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
     }
   }, [dev, open, language]);
 
+  // Properly scale sparkline to viewBox (0–40), mapped to y = 4..36
+  const sparklinePaths = React.useMemo(() => {
+    if (!dev || dev.status === 'OFFLINE') return null;
+    const sl = dev.sparkline;
+    const slMin = Math.min(...sl);
+    const slMax = Math.max(...sl);
+    const slRange = (slMax - slMin) || slMax || 1;
+    const points = sl.map((val, idx) => ({
+      x: (idx / (sl.length - 1 || 1)) * 100,
+      y: 36 - ((val - slMin) / slRange) * 32,
+    }));
+    return {
+      area: `M0,40 ${points.map(p => `L${p.x},${p.y}`).join(' ')} L100,40 Z`,
+      line: points.map((p, idx) => `${idx === 0 ? 'M' : 'L'}${p.x},${p.y}`).join(' '),
+    };
+  }, [dev]);
+
   if (!dev) return null;
 
   const handlePing = () => {
@@ -235,25 +252,17 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
                     <line x1="0" y1="20" x2="100" y2="20" stroke="#1f2433" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray="3 3" />
                     <line x1="0" y1="30" x2="100" y2="30" stroke="#1f2433" strokeWidth="1" vectorEffect="non-scaling-stroke" strokeDasharray="3 3" />
 
-                    {/* Gradient Area Fill */}
-                    <path 
-                      d={`M0,40 ` + dev.sparkline.map((val, idx) => {
-                        const x = (idx / (dev.sparkline.length - 1 || 1)) * 100;
-                        const y = 36 - ((val % 100) / 100) * 32;
-                        return `L${x},${y}`;
-                      }).join(' ') + ` L100,40 Z`}
+                    {/* Gradient Area Fill — properly scaled to viewBox (0–40) */}
+                    <path
+                      d={sparklinePaths?.area ?? ''}
                       fill="url(#sparkGradientModal)"
                     />
 
-                    {/* Main Line Waveform */}
-                    <path 
-                      d={dev.sparkline.map((val, idx) => {
-                        const x = (idx / (dev.sparkline.length - 1 || 1)) * 100;
-                        const y = 36 - ((val % 100) / 100) * 32;
-                        return `${idx === 0 ? 'M' : 'L'}${x},${y}`;
-                      }).join(' ')}
-                      fill="none" 
-                      stroke={dev.status === 'WARNING' ? '#ffba43' : '#00cfbf'} 
+                    {/* Main Line Waveform — properly scaled to viewBox (0–40) */}
+                    <path
+                      d={sparklinePaths?.line ?? ''}
+                      fill="none"
+                      stroke={dev.status === 'WARNING' ? '#ffba43' : '#00cfbf'}
                       strokeWidth="1.5"
                       vectorEffect="non-scaling-stroke"
                     />

@@ -94,23 +94,30 @@ export const DeviceCard = React.memo(function DeviceCard({ dev, onSelect }: Devi
           </p>
         </div>
 
-        {/* Inline vector sparkline */}
+        {/* Inline vector sparkline — properly scaled to viewBox (0–30) */}
         <div className="flex flex-col justify-end h-10 w-full">
           {dev.status === 'OFFLINE' ? (
             <svg className="w-full h-8" preserveAspectRatio="none" viewBox="0 0 100 30">
               <path d="M0,28 L100,28" fill="none" stroke="#3a494b" strokeDasharray="4 4" strokeWidth="1" vectorEffect="non-scaling-stroke"></path>
             </svg>
-          ) : (
-            <svg className="w-full h-8 filter drop-shadow-[0_0_3px_rgba(0,207,191,0.5)]" preserveAspectRatio="none" viewBox="0 0 100 30">
-              <path 
-                d={`M0,${25 - (dev.sparkline[0] % 10)} L12.5,${25 - (dev.sparkline[1] % 10)} L25,${25 - (dev.sparkline[2] % 10)} L37.5,${25 - (dev.sparkline[3] % 10)} L50,${25 - (dev.sparkline[4] % 10)} L62.5,${25 - (dev.sparkline[5] % 10)} L75,${25 - (dev.sparkline[6] % 10)} L87.5,${25 - (dev.sparkline[7] % 10)} L100,${25 - (dev.sparkline[8] % 10)}`}
-                fill="none" 
-                stroke={dev.status === 'WARNING' ? '#ffba43' : '#00cfbf'} 
-                strokeWidth="1.5"
-                vectorEffect="non-scaling-stroke"
-              ></path>
-            </svg>
-          )}
+          ) : (() => {
+            const sl = dev.sparkline;
+            const slMin = Math.min(...sl);
+            const slMax = Math.max(...sl);
+            const slRange = (slMax - slMin) || slMax || 1;
+            const sy = (v: number) => 25 - ((v - slMin) / slRange) * 20;
+            return (
+              <svg className="w-full h-8 filter drop-shadow-[0_0_3px_rgba(0,207,191,0.5)]" preserveAspectRatio="none" viewBox="0 0 100 30">
+                <path
+                  d={`M0,${sy(sl[0])} L12.5,${sy(sl[1])} L25,${sy(sl[2])} L37.5,${sy(sl[3])} L50,${sy(sl[4])} L62.5,${sy(sl[5])} L75,${sy(sl[6])} L87.5,${sy(sl[7])} L100,${sy(sl[8])}`}
+                  fill="none"
+                  stroke={dev.status === 'WARNING' ? '#ffba43' : '#00cfbf'}
+                  strokeWidth="1.5"
+                  vectorEffect="non-scaling-stroke"
+                ></path>
+              </svg>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -120,7 +127,8 @@ export const DeviceCard = React.memo(function DeviceCard({ dev, onSelect }: Devi
     prevProps.dev.id === nextProps.dev.id &&
     prevProps.dev.value === nextProps.dev.value &&
     prevProps.dev.status === nextProps.dev.status &&
-    prevProps.dev.sparkline[prevProps.dev.sparkline.length - 1] === nextProps.dev.sparkline[nextProps.dev.sparkline.length - 1] &&
+    prevProps.dev.sparkline.length === nextProps.dev.sparkline.length &&
+    prevProps.dev.sparkline.every((v, i) => v === nextProps.dev.sparkline[i]) &&
     prevProps.onSelect === nextProps.onSelect
   );
 });
