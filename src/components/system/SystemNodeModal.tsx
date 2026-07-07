@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTranslation } from '../../i18n/context';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -20,12 +20,18 @@ interface SystemNodeModalProps {
   onSelectNode: (nodeId: string, nodeLabel: string) => void;
 }
 
-const DEFAULT_NODES: SystemNodeItem[] = [
-  { id: 'NODE_01', nameKey: 'sysNode01Name', location: 'locSectionA', status: 'Active', latency: '4.2 ms' },
-  { id: 'NODE_02', nameKey: 'sysNode02Name', location: 'locSectionB', status: 'Active', latency: '6.8 ms' },
-  { id: 'NODE_03', nameKey: 'sysNode03Name', location: 'locSubstation', status: 'Active', latency: '3.5 ms' },
-  { id: 'NODE_04', nameKey: 'sysNode04Name', location: 'locSectionD', status: 'Standby', latency: '11.4 ms' }
-];
+function createDefaultNodes(): SystemNodeItem[] {
+  const baseNodes: Omit<SystemNodeItem, 'latency'>[] = [
+    { id: 'NODE_01', nameKey: 'sysNode01Name', location: 'locSectionA', status: 'Active' },
+    { id: 'NODE_02', nameKey: 'sysNode02Name', location: 'locSectionB', status: 'Active' },
+    { id: 'NODE_03', nameKey: 'sysNode03Name', location: 'locSubstation', status: 'Active' },
+    { id: 'NODE_04', nameKey: 'sysNode04Name', location: 'locSectionD', status: 'Standby' },
+  ];
+  return baseNodes.map(n => ({
+    ...n,
+    latency: `${(2 + Math.random() * 10).toFixed(1)} ms`,
+  }));
+}
 
 export const SystemNodeModal: React.FC<SystemNodeModalProps> = ({
   open,
@@ -34,7 +40,7 @@ export const SystemNodeModal: React.FC<SystemNodeModalProps> = ({
   onSelectNode
 }) => {
   const { t } = useTranslation();
-  const [nodes, setNodes] = useState<SystemNodeItem[]>(DEFAULT_NODES);
+  const [nodes, setNodes] = useState<SystemNodeItem[]>(createDefaultNodes);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newId, setNewId] = useState('');
   const [newLocation, setNewLocation] = useState('');
@@ -56,6 +62,18 @@ export const SystemNodeModal: React.FC<SystemNodeModalProps> = ({
     setShowAddForm(false);
     onSelectNode(customNodeId, customNode.nameKey);
   };
+
+  // Simulate live latency drift while modal is open
+  useEffect(() => {
+    if (!open) return;
+    const interval = setInterval(() => {
+      setNodes(prev => prev.map(n => ({
+        ...n,
+        latency: `${Math.max(1, parseFloat(n.latency) + (Math.random() - 0.5) * 1.5).toFixed(1)} ms`,
+      })));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [open]);
 
   const getNodeName = (item: SystemNodeItem) => {
     if (item.nameKey.startsWith('sysNode')) {

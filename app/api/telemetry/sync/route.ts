@@ -12,7 +12,7 @@ export async function GET() {
 
   if (process.env.BACKEND_SOURCE_ALERT === 'engine') {
     try {
-      const res = await fetch(`${baseUrl}/api/alert/recent`, { cache: 'no-store' });
+      const res = await fetch(`${baseUrl}/api/alert/recent?limit=500`, { cache: 'no-store' });
       const body: { code: number; msg: string; data: EngineAlert[] } = await res.json();
       alertsData = body.data.map(mapEngineAlertToUiAlert);
     } catch (err) {

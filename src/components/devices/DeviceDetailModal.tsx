@@ -21,31 +21,15 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
   const { t, language } = useTranslation();
   const [actionState, setActionState] = useState<'idle' | 'pinging' | 'rebooting'>('idle');
   const [pingLatency, setPingLatency] = useState<number | null>(null);
-  const [liveSparkline, setLiveSparkline] = useState<number[]>([]);
   const [lastCommandLog, setLastCommandLog] = useState<string>('');
 
   useEffect(() => {
     if (dev) {
-      setLiveSparkline([...dev.sparkline, dev.sparkline[dev.sparkline.length - 1] || 15]);
       setPingLatency(12);
       setActionState('idle');
       setLastCommandLog(`${t('cmdSysReady')}${dev.id}`);
     }
   }, [dev, open, language]);
-
-  // Simulate real-time stream fluctuation while modal is open
-  useEffect(() => {
-    if (!open || !dev || dev.status === 'OFFLINE') return;
-    const interval = setInterval(() => {
-      setLiveSparkline(prev => {
-        const last = prev[prev.length - 1] || 20;
-        const delta = (Math.random() - 0.48) * 3;
-        const next = Math.max(5, Math.min(95, parseFloat((last + delta).toFixed(1))));
-        return [...prev.slice(1), next];
-      });
-    }, 1200);
-    return () => clearInterval(interval);
-  }, [open, dev]);
 
   if (!dev) return null;
 
@@ -78,8 +62,6 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
     }
     setLastCommandLog(t('cmdAlarmCleared'));
   };
-
-  const currentValue = liveSparkline[liveSparkline.length - 1] || dev.value;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,7 +143,7 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
                 </span>
               </div>
               <div className="mt-3 flex items-baseline gap-1.5">
-                <span className="font-mono text-3xl font-extrabold text-white">{currentValue}</span>
+                <span className="font-mono text-3xl font-extrabold text-white">{dev.value}</span>
                 <span className="font-mono text-sm font-bold text-[#b9cacb]">{dev.unit}</span>
               </div>
             </div>
@@ -239,8 +221,8 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
 
                     {/* Gradient Area Fill */}
                     <path 
-                      d={`M0,40 ` + liveSparkline.map((val, idx) => {
-                        const x = (idx / (liveSparkline.length - 1 || 1)) * 100;
+                      d={`M0,40 ` + dev.sparkline.map((val, idx) => {
+                        const x = (idx / (dev.sparkline.length - 1 || 1)) * 100;
                         const y = 36 - ((val % 100) / 100) * 32;
                         return `L${x},${y}`;
                       }).join(' ') + ` L100,40 Z`}
@@ -249,8 +231,8 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
 
                     {/* Main Line Waveform */}
                     <path 
-                      d={liveSparkline.map((val, idx) => {
-                        const x = (idx / (liveSparkline.length - 1 || 1)) * 100;
+                      d={dev.sparkline.map((val, idx) => {
+                        const x = (idx / (dev.sparkline.length - 1 || 1)) * 100;
                         const y = 36 - ((val % 100) / 100) * 32;
                         return `${idx === 0 ? 'M' : 'L'}${x},${y}`;
                       }).join(' ')}

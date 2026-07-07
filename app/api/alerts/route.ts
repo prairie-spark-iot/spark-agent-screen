@@ -8,7 +8,7 @@ import { EngineAlert, mapEngineAlertToUiAlert } from '@/lib/adapters/alertAdapte
 // (a plain Alert[] array) stays stable for src/App.tsx regardless of which source backs it.
 async function fetchAlertsFromEngine(): Promise<Alert[]> {
   const baseUrl = process.env.BACKEND_ENGINE_URL;
-  const res = await fetch(`${baseUrl}/api/alert/recent`, { cache: 'no-store' });
+  const res = await fetch(`${baseUrl}/api/alert/recent?limit=500`, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(`engine GET /api/alert/recent returned ${res.status}`);
   }

@@ -46,7 +46,7 @@ export default function App() {
   const { documents } = useDocuments();
   const addDocumentLocal = useAddDocumentLocal();
 
-  const { isLoading: loading, isError, error: queryError, refetch } = useTelemetrySync();
+  const { isLoading: loading, isError, error: queryError, refetch, isFetching } = useTelemetrySync();
 
   // Real-time push layer — no-ops in mock mode (NEXT_PUBLIC_BACKEND_WS_URL unset). Each hook
   // writes straight into the telemetryQueryKey cache that useDevices/useAlerts above read from, so
@@ -286,12 +286,14 @@ export default function App() {
               )}
 
               {activeTab === 'alerts' && (
-                <AlertsView 
-                  alerts={alerts} 
-                  onNavigate={handleNavigate} 
+                <AlertsView
+                  alerts={alerts}
+                  onNavigate={handleNavigate}
                   onDiagnose={handleDiagnose}
                   onAutoDiagnoseAll={handleAutoDiagnoseAll}
                   diagnosingAll={diagnosingAll}
+                  onRefresh={() => refetch()}
+                  refreshing={isFetching}
                 />
               )}
 

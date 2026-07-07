@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Device } from '../types';
 import { useTranslation } from '../i18n/context';
 import { KpiCard } from './dashboard/KpiCard';
-import { TelemetryChart } from './dashboard/TelemetryChart';
+import { TelemetryChart, type TelemetryPoint } from './dashboard/TelemetryChart';
 import { RecentAlertsFeed } from './dashboard/RecentAlertsFeed';
 
 interface DashboardViewProps {
@@ -16,30 +16,39 @@ export default function DashboardView({ alerts, devices, onNavigate, onDiagnose 
   const { t, language } = useTranslation();
 
   // Compute dashboard metrics with useMemo for performance
-  const { totalDevices, onlineDevices, activeAlertsCount, diagnosedToday } = React.useMemo(() => {
+  const { totalDevices, onlineDevices, activeAlertsCount, diagnosedToday, avgConfidence } = React.useMemo(() => {
+    const diagnosedAlerts = alerts.filter(a => a.diagnosis?.confidence != null);
+    const avg = diagnosedAlerts.length > 0
+      ? Math.round(diagnosedAlerts.reduce((sum, a) => sum + a.diagnosis!.confidence, 0) / diagnosedAlerts.length)
+      : null;
     return {
       totalDevices: devices.length,
       onlineDevices: devices.filter(d => d.status === 'ONLINE').length,
       activeAlertsCount: alerts.filter(a => a.status === 'Pending' || a.status === 'Diagnosing').length,
-      diagnosedToday: alerts.filter(a => a.status === 'Diagnosed').length
+      diagnosedToday: alerts.filter(a => a.status === 'Diagnosed').length,
+      avgConfidence: avg,
     };
   }, [devices, alerts]);
 
-  // Compile real-time or historical telemetry points for chart from devices
-  // Let's make an elegant series of 11 points that represents temperature and pressure trends
-  const telemetryData = React.useMemo(() => [
-    { time: '10:00', temp: 22, press: 41 },
-    { time: '10:15', temp: 24, press: 40 },
-    { time: '10:30', temp: 18, press: 43 },
-    { time: '10:45', temp: 15, press: 40 },
-    { time: '11:00', temp: 28, press: 45 },
-    { time: '11:15', temp: 48, press: 38 },
-    { time: '11:30', temp: 64, press: 32 },
-    { time: '11:45', temp: 58, press: 60 },
-    { time: '12:00', temp: 72, press: 86 },
-    { time: '12:15', temp: 88, press: 71 },
-    { time: '12:30', temp: 92, press: 60 }
-  ], []);
+  // Compile real-time telemetry points for chart from device sparkline data
+  const telemetryData = React.useMemo<TelemetryPoint[]>(() => {
+    const tempDevice = devices.find(d => d.metricName === 'CORE TEMP');
+    const pressDevice = devices.find(d => d.metricName === 'PRESSURE');
+
+    const tempData = tempDevice?.sparkline ?? [];
+    const pressData = pressDevice?.sparkline ?? [];
+    const len = Math.max(tempData.length, pressData.length, 1);
+
+    const now = new Date();
+    return Array.from({ length: len }, (_, i) => {
+      const t = new Date(now.getTime() - (len - 1 - i) * 2 * 60000);
+      return {
+        time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`,
+        temp: tempData[i] ?? 0,
+        press: pressData[i] ?? 0,
+      };
+    });
+  }, [devices]);
 
   // Get most recent 3 alerts for the feed
   const recentAlerts = React.useMemo(() => alerts.slice(0, 3), [alerts]);
@@ -83,10 +92,10 @@ export default function DashboardView({ alerts, devices, onNavigate, onDiagnose 
         {/* Card 4: Avg Confidence */}
         <KpiCard
           title={t('avgConfidence')}
-          value="87%"
+          value={avgConfidence !== null ? `${avgConfidence}%` : '--'}
           iconName="verified"
           iconColorClass="text-[#00cfbf]"
-          progressPercentage={87}
+          progressPercentage={avgConfidence ?? 0}
           progressColorClass="bg-[#00cfbf]"
         />
       </div>

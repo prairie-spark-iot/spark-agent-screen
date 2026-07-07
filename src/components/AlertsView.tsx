@@ -12,23 +12,32 @@ interface AlertsViewProps {
   onDiagnose: (alertId: string) => void;
   onAutoDiagnoseAll: () => void;
   diagnosingAll: boolean;
+  onRefresh: () => void;
+  refreshing: boolean;
 }
 
-export default function AlertsView({ 
-  alerts, 
-  onNavigate, 
-  onDiagnose, 
-  onAutoDiagnoseAll, 
-  diagnosingAll 
+export default function AlertsView({
+  alerts,
+  onNavigate,
+  onDiagnose,
+  onAutoDiagnoseAll,
+  diagnosingAll,
+  onRefresh,
+  refreshing
 }: AlertsViewProps) {
   const { t, language } = useTranslation();
   const [activeSeverityTab, setActiveSeverityTab] = useState<'All' | Severity>('All');
   const [localSearch, setLocalSearch] = useState('');
   const [timeRange, setTimeRange] = useState<'24h' | '1h' | '7d' | 'all'>('24h');
   const [page, setPage] = useState(1);
-  const pageSize = 10;
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => { setPage(1); }, [activeSeverityTab, localSearch, timeRange]);
+
+  const handlePageSizeChange = (size: number) => {
+    setPageSize(size);
+    setPage(1);
+  };
 
   const cycleTimeRange = () => {
     const order: Array<'24h' | '1h' | '7d' | 'all'> = ['24h', '1h', '7d', 'all'];
@@ -73,7 +82,22 @@ export default function AlertsView({
 
   // Filter alerts
   const filteredAlerts = React.useMemo(() => {
+    const now = Date.now();
+    const timeRangeCutoff: Record<string, number> = {
+      '1h': now - 60 * 60 * 1000,
+      '24h': now - 24 * 60 * 60 * 1000,
+      '7d': now - 7 * 24 * 60 * 60 * 1000,
+      'all': 0,
+    };
+    const cutoff = timeRangeCutoff[timeRange] ?? 0;
+
     return alerts.filter(a => {
+      // Time range filter
+      if (cutoff > 0) {
+        const alertTime = Date.parse(a.timestamp);
+        if (isNaN(alertTime) || alertTime < cutoff) return false;
+      }
+
       // Severity tab filter
       if (activeSeverityTab !== 'All' && a.severity !== activeSeverityTab) {
         return false;
@@ -89,7 +113,7 @@ export default function AlertsView({
       }
       return true;
     });
-  }, [alerts, activeSeverityTab, localSearch]);
+  }, [alerts, activeSeverityTab, localSearch, timeRange]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / pageSize));
@@ -130,8 +154,18 @@ export default function AlertsView({
         </div>
 
         <div className="flex w-full sm:w-auto flex-wrap items-center gap-2 justify-end">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
+            disabled={refreshing}
+            onClick={onRefresh}
+            className="h-8 border-[#2d3240] text-[#e2e8f0] hover:bg-[#1a1f2c] hover:text-[#00cfbf] hover:border-[#00cfbf]/50 transition-colors text-xs flex items-center gap-1.5 disabled:opacity-50 cursor-pointer rounded-md"
+          >
+            <span className={`material-symbols-outlined text-[16px] ${refreshing ? 'spin-slow' : ''}`}>refresh</span>
+            {refreshing ? t('refreshing') : t('refresh')}
+          </Button>
+
+          <Button
+            variant="outline"
             onClick={cycleTimeRange}
             className="h-8 border-[#2d3240] text-[#e2e8f0] hover:bg-[#1a1f2c] hover:text-[#00cfbf] hover:border-[#00cfbf]/50 transition-colors text-xs flex items-center gap-1.5 cursor-pointer rounded-md"
           >
@@ -168,6 +202,7 @@ export default function AlertsView({
         pageSize={pageSize}
         totalPages={totalPages}
         onPageChange={setPage}
+        onPageSizeChange={handlePageSizeChange}
         onNavigate={onNavigate}
         onDiagnose={onDiagnose}
       />

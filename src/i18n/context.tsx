@@ -660,6 +660,26 @@ export const translations: Translations = {
     en: "alerts",
     zh: "条告警"
   },
+  rowsPerPage: {
+    en: "Rows per page",
+    zh: "每页显示"
+  },
+  firstPage: {
+    en: "First page",
+    zh: "首页"
+  },
+  previousPage: {
+    en: "Previous page",
+    zh: "上一页"
+  },
+  nextPage: {
+    en: "Next page",
+    zh: "下一页"
+  },
+  lastPage: {
+    en: "Last page",
+    zh: "末页"
+  },
   confidenceLabel: {
     en: "Confidence",
     zh: "置信度"
@@ -827,6 +847,14 @@ export const translations: Translations = {
   exportReport: {
     en: "Export Report",
     zh: "导出诊断报告"
+  },
+  refresh: {
+    en: "Refresh",
+    zh: "刷新"
+  },
+  refreshing: {
+    en: "Refreshing...",
+    zh: "刷新中..."
   },
   exportReportSuccess: {
     en: "Diagnostic summary report exported as CSV.",

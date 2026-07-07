@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Device } from '../types';
 import { useTranslation } from '../i18n/context';
 import { Input } from '@/components/ui/input';
@@ -27,18 +27,34 @@ export default function DevicesView({ devices, onAddDevice, onUpdateStatus }: De
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
 
+  // Keep selectedDevice in sync when devices array updates (WS push or 4s poll)
+  useEffect(() => {
+    if (!selectedDevice) return;
+    const updated = devices.find(d => d.id === selectedDevice.id);
+    if (updated) setSelectedDevice(updated);
+  }, [devices]);
+
   // Summary KPI Calculations memoized for smooth telemetry polling
-  const { totalCount, onlineCount, warningCount, offlineCount, healthRate } = React.useMemo(() => {
+  const { totalCount, onlineCount, warningCount, offlineCount, healthRate, avgResponseTime } = React.useMemo(() => {
     const total = devices.length;
     const online = devices.filter(d => d.status === 'ONLINE').length;
     const warning = devices.filter(d => d.status === 'WARNING').length;
     const offline = devices.filter(d => d.status === 'OFFLINE').length;
+    // Simulate avg response time from online device count + sparkline variance
+    const onlineDevs = devices.filter(d => d.status === 'ONLINE');
+    const simLatency = onlineDevs.length > 0
+      ? (3 + onlineDevs.length * 0.6 + onlineDevs.reduce((acc, d) => {
+          const vals = d.sparkline.filter(v => v > 0);
+          return vals.length > 1 ? acc + Math.abs(vals[vals.length - 1] - vals[0]) / vals[0] * 1.5 : acc;
+        }, 0) / onlineDevs.length).toFixed(1)
+      : '--';
     return {
       totalCount: total,
       onlineCount: online,
       warningCount: warning,
       offlineCount: offline,
-      healthRate: total > 0 ? Math.round((online / total) * 100) : 100
+      healthRate: total > 0 ? Math.round((online / total) * 100) : 100,
+      avgResponseTime: simLatency,
     };
   }, [devices]);
 
@@ -95,8 +111,8 @@ export default function DevicesView({ devices, onAddDevice, onUpdateStatus }: De
         <div className="bg-[#141822] border border-[#2d3240] rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
             <p className="font-mono text-[11px] font-bold tracking-wider text-[#b9cacb] uppercase">{t('avgResponseTime')}</p>
-            <p className="font-mono text-2xl font-extrabold text-white mt-1">
-              8<span className="text-sm font-normal text-[#849495] ml-0.5">ms</span>
+             <p className="font-mono text-2xl font-extrabold text-white mt-1">
+               {avgResponseTime !== '--' ? avgResponseTime : '--'}{avgResponseTime !== '--' && <span className="text-sm font-normal text-[#849495] ml-0.5">ms</span>}
             </p>
           </div>
           <div className="w-10 h-10 rounded-lg bg-[#1a1f2c] border border-[#3a494b] flex items-center justify-center text-[#b9cacb]">

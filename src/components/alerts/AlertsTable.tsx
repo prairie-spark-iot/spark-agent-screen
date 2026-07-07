@@ -22,11 +22,37 @@ interface AlertsTableProps {
   pageSize: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  onPageSizeChange: (pageSize: number) => void;
   onNavigate: (tab: string, arg?: string) => void;
   onDiagnose: (alertId: string) => void;
 }
 
 const columnHelper = createColumnHelper<Alert>();
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100];
+
+// Cap cosmetic spacer rows so a small result set (or a large page size) never
+// pads the table out with dozens of blank rows just to "fill the page".
+const MAX_SPACER_ROWS = 5;
+
+// Windowed page list with ellipsis markers, e.g. [1, '…', 4, 5, 6, '…', 42]
+type PageToken = number | 'ellipsis-start' | 'ellipsis-end';
+
+function getPageTokens(current: number, total: number): PageToken[] {
+  const delta = 1;
+  const tokens: PageToken[] = [];
+
+  const rangeStart = Math.max(2, current - delta);
+  const rangeEnd = Math.min(total - 1, current + delta);
+
+  tokens.push(1);
+  if (rangeStart > 2) tokens.push('ellipsis-start');
+  for (let i = rangeStart; i <= rangeEnd; i++) tokens.push(i);
+  if (rangeEnd < total - 1) tokens.push('ellipsis-end');
+  if (total > 1) tokens.push(total);
+
+  return tokens;
+}
 
 const deviceIconFor = (icon?: string) => {
   if (icon === 'router') return 'router';
@@ -77,6 +103,7 @@ export const AlertsTable = React.memo(function AlertsTable({
   pageSize,
   totalPages,
   onPageChange,
+  onPageSizeChange,
   onNavigate,
   onDiagnose
 }: AlertsTableProps) {
@@ -207,6 +234,10 @@ export const AlertsTable = React.memo(function AlertsTable({
   });
 
   const pageRows = table.getRowModel().rows;
+  const pageTokens = React.useMemo(() => getPageTokens(page, totalPages), [page, totalPages]);
+  const spacerCount = Math.min(pageSize - pageRows.length, MAX_SPACER_ROWS);
+  const rangeStart = totalFilteredCount === 0 ? 0 : (page - 1) * pageSize + 1;
+  const rangeEnd = totalFilteredCount === 0 ? 0 : rangeStart + pageRows.length - 1;
 
   return (
     <div className="bg-[#141822] border border-[#2d3240] rounded-xl overflow-hidden shadow-md flex flex-col">
@@ -246,9 +277,11 @@ export const AlertsTable = React.memo(function AlertsTable({
                     ))}
                   </TableRow>
                 ))}
-                {/* Spacer rows to fill page */}
-                {pageRows.length < pageSize && (
-                  Array.from({ length: pageSize - pageRows.length }, (_, i) => (
+                {/* Spacer rows to keep the footer from jumping on a short last page.
+                    Capped at MAX_SPACER_ROWS so a small filtered result set (or a
+                    large page size) doesn't pad the table with dozens of blank rows. */}
+                {spacerCount > 0 && (
+                  Array.from({ length: spacerCount }, (_, i) => (
                     <TableRow key={`spacer-${i}`} className="hover:bg-transparent cursor-default">
                       <TableCell colSpan={columns.length} className="px-5 py-4 border-0">&nbsp;</TableCell>
                     </TableRow>
@@ -261,43 +294,102 @@ export const AlertsTable = React.memo(function AlertsTable({
       </div>
 
       {/* Pagination Footer */}
-      <div className="p-4 border-t border-[#222630] flex items-center justify-between bg-[#191c23] text-xs">
-        <p className="text-[#b9cacb]">
-          {t('showing')}{' '}
-          <span className="text-white font-mono">{pageRows.length}</span>{' '}
-          {t('ofTotal')}{' '}
-          <span className="text-white font-mono">{totalFilteredCount}</span>{' '}
-          {t('alertsCount')}
-        </p>
-        <div className="flex items-center gap-2">
+      <div className="p-4 border-t border-[#222630] flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#191c23] text-xs">
+        <div className="flex items-center gap-4">
+          <p className="text-[#b9cacb] whitespace-nowrap">
+            {totalFilteredCount === 0 ? (
+              <>
+                {t('showing')}{' '}
+                <span className="text-white font-mono">0</span>{' '}
+                {t('ofTotal')}{' '}
+                <span className="text-white font-mono">0</span>{' '}
+                {t('alertsCount')}
+              </>
+            ) : (
+              <>
+                {t('showing')}{' '}
+                <span className="text-white font-mono">{rangeStart}-{rangeEnd}</span>{' '}
+                {t('ofTotal')}{' '}
+                <span className="text-white font-mono">{totalFilteredCount}</span>{' '}
+                {t('alertsCount')}
+              </>
+            )}
+          </p>
+
+          <div className="flex items-center gap-1.5">
+            <span className="text-[#849495] whitespace-nowrap">{t('rowsPerPage')}</span>
+            <div className="flex items-center gap-1 font-mono">
+              {PAGE_SIZE_OPTIONS.map((size) => (
+                <button
+                  key={size}
+                  onClick={() => onPageSizeChange(size)}
+                  className={`px-1.5 h-6 rounded flex items-center justify-center transition-colors ${
+                    size === pageSize
+                      ? 'bg-secondary/20 text-secondary border border-secondary/30'
+                      : 'text-[#b9cacb] hover:bg-[#32353c]'
+                  }`}
+                >
+                  {size}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-1">
           <button
-            className="p-1 rounded text-[#b9cacb] hover:bg-[#32353c] hover:text-white transition-colors disabled:opacity-50"
+            aria-label={t('firstPage')}
+            className="p-1 rounded text-[#b9cacb] hover:bg-[#32353c] hover:text-white transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            disabled={page === 1}
+            onClick={() => onPageChange(1)}
+          >
+            <span className="material-symbols-outlined text-[20px]">first_page</span>
+          </button>
+          <button
+            aria-label={t('previousPage')}
+            className="p-1 rounded text-[#b9cacb] hover:bg-[#32353c] hover:text-white transition-colors disabled:opacity-50 disabled:pointer-events-none"
             disabled={page === 1}
             onClick={() => onPageChange(page - 1)}
           >
             <span className="material-symbols-outlined text-[20px]">chevron_left</span>
           </button>
           <div className="flex items-center gap-1 font-mono">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
-              <button
-                key={n}
-                onClick={() => onPageChange(n)}
-                className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${
-                  n === page
-                    ? 'bg-secondary/20 text-secondary border border-secondary/30'
-                    : 'text-[#b9cacb] hover:bg-[#32353c]'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
+            {pageTokens.map((tok) =>
+              tok === 'ellipsis-start' || tok === 'ellipsis-end' ? (
+                <span key={tok} className="w-6 h-6 flex items-center justify-center text-[#849495]">
+                  &hellip;
+                </span>
+              ) : (
+                <button
+                  key={tok}
+                  aria-current={tok === page ? 'page' : undefined}
+                  onClick={() => onPageChange(tok)}
+                  className={`w-6 h-6 rounded flex items-center justify-center transition-colors ${
+                    tok === page
+                      ? 'bg-secondary/20 text-secondary border border-secondary/30'
+                      : 'text-[#b9cacb] hover:bg-[#32353c]'
+                  }`}
+                >
+                  {tok}
+                </button>
+              )
+            )}
           </div>
           <button
-            className="p-1 rounded text-[#b9cacb] hover:bg-[#32353c] hover:text-white transition-colors disabled:opacity-50"
+            aria-label={t('nextPage')}
+            className="p-1 rounded text-[#b9cacb] hover:bg-[#32353c] hover:text-white transition-colors disabled:opacity-50 disabled:pointer-events-none"
             disabled={page === totalPages}
             onClick={() => onPageChange(page + 1)}
           >
             <span className="material-symbols-outlined text-[20px]">chevron_right</span>
+          </button>
+          <button
+            aria-label={t('lastPage')}
+            className="p-1 rounded text-[#b9cacb] hover:bg-[#32353c] hover:text-white transition-colors disabled:opacity-50 disabled:pointer-events-none"
+            disabled={page === totalPages}
+            onClick={() => onPageChange(totalPages)}
+          >
+            <span className="material-symbols-outlined text-[20px]">last_page</span>
           </button>
         </div>
       </div>

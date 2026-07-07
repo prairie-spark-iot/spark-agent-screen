@@ -2,7 +2,7 @@ import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useTranslation } from '../../i18n/context';
 
-interface TelemetryPoint {
+export interface TelemetryPoint {
   time: string;
   temp: number;
   press: number;
