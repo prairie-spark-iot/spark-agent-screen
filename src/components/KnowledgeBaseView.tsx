@@ -71,8 +71,8 @@ export default function KnowledgeBaseView({ documents, onAddDoc }: KnowledgeBase
       {/* Featured Banner */}
       <FeaturedDocBanner />
 
-      {/* Category Grid */}
-      <CategoryCards />
+      {/* Category Grid with real document count */}
+      <CategoryCards totalDocs={documents.length} />
 
       {/* Table listing technical documents */}
       <div className="bg-[#141822] border border-[#2d3240] rounded-xl overflow-hidden shadow-md flex flex-col">

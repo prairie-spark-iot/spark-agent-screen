@@ -1,7 +1,11 @@
 import React from 'react';
 import { useTranslation } from '../../i18n/context';
 
-export const CategoryCards = React.memo(function CategoryCards() {
+interface CategoryCardsProps {
+  totalDocs?: number;
+}
+
+export const CategoryCards = React.memo(function CategoryCards({ totalDocs }: CategoryCardsProps) {
   const { t } = useTranslation();
 
   return (
@@ -12,7 +16,7 @@ export const CategoryCards = React.memo(function CategoryCards() {
         </div>
         <h4 className="font-sans text-sm font-bold text-white mt-1">{t('equipmentManuals')}</h4>
         <p className="font-sans text-xs text-[#d1d5db] font-medium leading-relaxed">
-          {t('equipmentManualsDesc')}
+          {totalDocs !== undefined ? `${totalDocs} document${totalDocs !== 1 ? 's' : ''} parsed by AI agent diagnostics.` : t('equipmentManualsDesc')}
         </p>
       </div>
 

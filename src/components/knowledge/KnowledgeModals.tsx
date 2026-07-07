@@ -161,18 +161,16 @@ export const DocPreviewModal: React.FC<DocPreviewModalProps> = ({ doc, open, onO
                 <span className="material-symbols-outlined text-base">radar</span>
                 {t('vecEmbedStatus')}
               </span>
-              <span>{t('vecDim')}</span>
+              <span className="text-[#667475]">--</span>
             </div>
 
-            <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-              <div>
-                <span className="text-[#849495] block">{t('cosineSimLabel')}</span>
-                <span className="text-white font-bold">{t('cosineSimValue')}</span>
-              </div>
-              <div>
-                <span className="text-[#849495] block">{t('diagUsageLabel')}</span>
-                <span className="text-[#00cfbf] font-bold">{doc.status || 'Indexed'}</span>
-              </div>
+            <div className="text-xs font-mono">
+              <span className="text-[#849495] block">{t('cosineSimLabel')}</span>
+              <span className="text-[#667475]">--</span>
+            </div>
+            <div className="text-xs font-mono">
+              <span className="text-[#849495] block">{t('diagUsageLabel')}</span>
+              <span className="text-[#00cfbf] font-bold">{doc.status || 'Indexed'}</span>
             </div>
           </div>
 
@@ -182,9 +180,11 @@ export const DocPreviewModal: React.FC<DocPreviewModalProps> = ({ doc, open, onO
               {t('aiExcerptTitle')}
             </h4>
             <div className="font-mono text-xs text-[#d1d5db] leading-relaxed bg-[#0e1119] p-3 rounded-lg border border-[#222630]">
-              <p className="text-[#00cfbf] font-bold pb-1">[SYSTEM_INSTRUCTION_HEADER]</p>
-              <p>
+              <p className="text-[#667475] italic">
                 {t('aiExcerptContent')}
+              </p>
+              <p className="text-[#667475] text-[10px] mt-2 border-t border-[#222630] pt-2">
+                — Mock content: actual document excerpt unavailable in memory-only mode.
               </p>
             </div>
           </div>
