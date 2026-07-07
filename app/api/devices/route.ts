@@ -1,25 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Device } from '@/src/types';
-import { EngineDevice, mapEngineDeviceToUiDevice, withRealSparkline } from '@/lib/adapters/deviceAdapter';
+import { fetchDevicesFromEngine } from '@/lib/adapters/deviceAdapter';
 
 // BACKEND_SOURCE_DEVICE=engine|mock — strangler-fig flag, see
 // spark-agent-docs/frontend-backend-integration-strategy.md §1. This route's own contract
 // (a plain Device[] array) stays stable for src/App.tsx regardless of which source backs it.
-async function fetchDevicesFromEngine(): Promise<Device[]> {
-  const baseUrl = process.env.BACKEND_ENGINE_URL;
-  const res = await fetch(`${baseUrl}/api/devices`, { cache: 'no-store' });
-  if (!res.ok) {
-    throw new Error(`engine GET /api/devices returned ${res.status}`);
-  }
-  const body: { code: number; msg: string; data: EngineDevice[] } = await res.json();
-  if (body.code !== 0) {
-    throw new Error(`engine GET /api/devices error: ${body.msg}`);
-  }
-  const mapped = body.data.map(mapEngineDeviceToUiDevice);
-  return Promise.all(mapped.map(d => withRealSparkline(baseUrl!, d)));
-}
-
 export async function GET() {
   console.log('[BFF][devices] BACKEND_SOURCE_DEVICE =', JSON.stringify(process.env.BACKEND_SOURCE_DEVICE),
     '| BACKEND_ENGINE_URL =', JSON.stringify(process.env.BACKEND_ENGINE_URL));

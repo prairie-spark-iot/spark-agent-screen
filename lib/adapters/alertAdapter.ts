@@ -124,6 +124,23 @@ function mapDiagnosis(a: EngineAlert): DiagnosisReport | undefined {
   };
 }
 
+/**
+ * Fetches alerts from the external engine API. Used by both the alerts route and the
+ * telemetry sync route to avoid duplicating the fetch+parse+map logic.
+ */
+export async function fetchAlertsFromEngine(): Promise<Alert[]> {
+  const baseUrl = process.env.BACKEND_ENGINE_URL;
+  const res = await fetch(`${baseUrl}/api/alert/recent?limit=500`, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`engine GET /api/alert/recent returned ${res.status}`);
+  }
+  const body: { code: number; msg: string; data: EngineAlert[] } = await res.json();
+  if (body.code !== 0) {
+    throw new Error(`engine GET /api/alert/recent error: ${body.msg}`);
+  }
+  return body.data.map(mapEngineAlertToUiAlert);
+}
+
 export function mapEngineAlertToUiAlert(a: EngineAlert): Alert {
   return {
     id: String(a.id),

@@ -188,6 +188,24 @@ export async function fetchSparklineHistory(
   }
 }
 
+/**
+ * Fetches all devices from the external engine API. Used by both the devices route and the
+ * telemetry sync route to avoid duplicating the fetch+parse+map+sparkline logic.
+ */
+export async function fetchDevicesFromEngine(): Promise<Device[]> {
+  const baseUrl = process.env.BACKEND_ENGINE_URL;
+  const res = await fetch(`${baseUrl}/api/devices`, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`engine GET /api/devices returned ${res.status}`);
+  }
+  const body: { code: number; msg: string; data: EngineDevice[] } = await res.json();
+  if (body.code !== 0) {
+    throw new Error(`engine GET /api/devices error: ${body.msg}`);
+  }
+  const mapped = body.data.map(mapEngineDeviceToUiDevice);
+  return Promise.all(mapped.map(d => withRealSparkline(baseUrl!, d)));
+}
+
 /** Replaces a mapped Device's flat-filled sparkline with real history from the engine. Never
  *  throws (fetchSparklineHistory always resolves), so this is always safe to Promise.all(). */
 export async function withRealSparkline(baseUrl: string, device: Device): Promise<Device> {
