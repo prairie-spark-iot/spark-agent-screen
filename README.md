@@ -11,7 +11,7 @@
 [![React](https://img.shields.io/badge/Frontend-React%2019-00cfbf?style=for-the-badge&logo=react&logoColor=0B0E14)](https://react.dev/)
 [![Next.js](https://img.shields.io/badge/Framework-Next.js%2015-ffffff?style=for-the-badge&logo=next.js&logoColor=0B0E14)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript%205.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Gemini AI](https://img.shields.io/badge/AI%20Engine-Gemini%203.5%20Flash-ffba43?style=for-the-badge&logo=google&logoColor=0B0E14)](https://ai.google.dev/)
+[![Qwen](https://img.shields.io/badge/AI-Qwen3.5%20Local-ffba43?style=for-the-badge)](https://github.com/QwenLM/Qwen)
 [![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vitest](https://img.shields.io/badge/Tested%20With-Vitest%204.1-FCC72B?style=for-the-badge&logo=vitest&logoColor=0B0E14)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-MIT-4c566a?style=for-the-badge)](LICENSE)
@@ -19,7 +19,7 @@
 ---
 
 <p align="center">
-  <b>Spark IoT AI Agent</b> is built for modern Industrial IoT (IIoT) environments, combining high-frequency sensor telemetry, Retrieval-Augmented Generation (RAG) knowledge retrieval, and <b>Gemini 3.5 Flash</b> deep reasoning to deliver millisecond-level fault root-cause tracing, engineering drawing cross-referencing, and closed-loop remediation for complex manufacturing machinery.
+  <b>Spark IoT AI Agent</b> is built for modern Industrial IoT (IIoT) environments, combining high-frequency sensor telemetry, Retrieval-Augmented Generation (RAG) knowledge retrieval, and <b>local Qwen 3.5 (4B)</b> deep reasoning to deliver millisecond-level fault root-cause tracing, engineering drawing cross-referencing, and closed-loop remediation for complex manufacturing machinery.
 </p>
 
 </div>
@@ -45,7 +45,7 @@ Password: admin123456
 | :---: | :--- | :--- |
 | 🛡️ | **Authentication Gateway** | Cyber-industrial login gateway with credential validation, session persistence, and real-time network status indicators. |
 | 🌐 | **Bilingual i18n** | Full English (`en`) and Chinese (`zh`) translation support across login, dashboard, telemetry, SOP recommendations, and charts. Hot-switchable at any time. |
-| 🧠 | **Gemini AI Diagnosis** | On threshold breach (vibration, overheating, etc.), automatically extracts multi-dimensional telemetry context and triggers AI deep reasoning with confidence-scored remediation timelines. |
+| 🧠 | **Local LLM Diagnosis** | On threshold breach (vibration, overheating, etc.), automatically extracts multi-dimensional telemetry context and triggers local LLM deep reasoning with confidence-scored remediation timelines. |
 | 📚 | **RAG Knowledge Base** | Upload maintenance manuals, schematics, and log files. AI automatically chunks and embeds content, then cross-references best practices during diagnosis. |
 | 📡 | **Multi-Node Switching** | Hot-switch between distributed factory sector gateways (assembly line, hydraulics, warehouse). Real-time latency ping and online status per node. |
 | 🎛️ | **Industrial Telemetry UI** | Dark cyber-industrial theme with sparkline charts, dynamic pulse node states, and multi-zone device matrix. |
@@ -78,8 +78,8 @@ The system uses a modular layered architecture isolating data acquisition, infer
         | Real-time threshold triggers                                  | RAG retrieval
         v                                                                   v
 +-------------------------------+                                 +-----------------+
-|  🤖 Gemini 3.5 Flash Engine   | <====== (RAG Augmentation) ===== |  📚 Knowledge   |
-|  (Evidence chain + confidence) |                                 |  (SOP library)  |
+|  🤖 Qwen 3.5 Local Engine      | <====== (RAG Augmentation) ===== |  📚 Knowledge   |
+|  (Ollama / 4B param)           |                                 |  (SOP library)  |
 +-------------------------------+                                 +-----------------+
         |
         v
@@ -136,15 +136,15 @@ corepack enable
 pnpm install
 ```
 
-### Configure AI API Key (Optional)
+### Configure Backend Engine
 
-Create `.env.local` in the project root to enable real Gemini 3.5 Flash inference:
+The diagnosis proxy forwards requests to a local backend engine. Set the URL in `.env.local`:
 
 ```env
-GEMINI_API_KEY="your_google_ai_studio_api_key_here"
+BACKEND_ENGINE_URL="http://localhost:8000"
 ```
 
-Without this key, AI diagnosis falls back to a built-in heuristic engine in `lib/db.ts`.
+The engine runs **Qwen 3.5 (4B)** for deep reasoning and **Qwen3-Embedding (0.6B)** for RAG knowledge retrieval. Without this URL, diagnosis requests will fail with a gateway error.
 
 ### Start Dev Server
 

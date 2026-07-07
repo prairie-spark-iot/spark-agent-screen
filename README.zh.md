@@ -9,7 +9,7 @@
 [![React](https://img.shields.io/badge/Frontend-React%2019-00cfbf?style=for-the-badge&logo=react&logoColor=0B0E14)](https://react.dev/)
 [![Next.js](https://img.shields.io/badge/Framework-Next.js%2015-ffffff?style=for-the-badge&logo=next.js&logoColor=0B0E14)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript%205.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Gemini AI](https://img.shields.io/badge/AI%20Engine-Gemini%203.5%20Flash-ffba43?style=for-the-badge&logo=google&logoColor=0B0E14)](https://ai.google.dev/)
+[![Qwen](https://img.shields.io/badge/AI-Qwen3.5%20Local-ffba43?style=for-the-badge)](https://github.com/QwenLM/Qwen)
 [![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Vitest](https://img.shields.io/badge/Tested%20With-Vitest%204.1-FCC72B?style=for-the-badge&logo=vitest&logoColor=0B0E14)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-MIT-4c566a?style=for-the-badge)](LICENSE)
@@ -19,7 +19,7 @@
 ---
 
 <p align="center">
-  <b>Spark IoT AI Agent</b> 专为现代工业物联网 (IIoT) 打造，结合高频传感器数据遥测、检索增强生成 (RAG) 知识切片与 <b>Gemini 3.5 Flash</b> 深层推理引擎，为复杂制造机械提供毫秒级故障根因溯源、工程图纸自动比对与闭环运维处置方案。
+  <b>Spark IoT AI Agent</b> 专为现代工业物联网 (IIoT) 打造，结合高频传感器数据遥测、检索增强生成 (RAG) 知识切片与 <b>本地 Qwen 3.5 (4B)</b> 深层推理引擎，为复杂制造机械提供毫秒级故障根因溯源、工程图纸自动比对与闭环运维处置方案。
 </p>
 
 </div>
@@ -45,7 +45,7 @@
 | :---: | :--- | :--- |
 | 🛡️ | **身份认证网关** | 赛博工业风登录网关，凭据验证、会话持久化与实时网络连通状态指示。 |
 | 🌐 | **双语国际化** | 完整的英文 (`en`) 与中文 (`zh`) 翻译支持，覆盖仪表盘、遥测指标、SOP 建议和图表，随时热切换。 |
-| 🧠 | **Gemini AI 诊断** | 当监测到振动、过热等阈值异常时，自动提取多维遥测上下文，触发 AI 深度推理并生成带置信度的处理时间轴。 |
+| 🧠 | **本地 LLM 诊断** | 当监测到振动、过热等阈值异常时，自动提取多维遥测上下文，触发本地 LLM 深度推理并生成带置信度的处理时间轴。 |
 | 📚 | **RAG 知识引擎** | 上传维修手册、原理图与日志文件，AI 自动切片嵌入，诊断时关联最佳实践参考。 |
 | 📡 | **多节点切换** | 在主装配线、液压区、仓储机房等分布式车间网关之间热切换，实时显示延迟与在线状态。 |
 | 🎛️ | **工业遥测仪表盘** | 深色赛博工业主题，微型趋势图、动态脉冲节点状态与多工区设备矩阵。 |
@@ -78,8 +78,8 @@
         | 实时阈值触发                                                | RAG 知识检索
         v                                                                 v
 +-------------------------------+                                 +-----------------+
-|  🤖 Gemini 3.5 Flash 推理引擎 | <==== (RAG 增强检索) ==== |  📚 知识工程引擎  |
-|  (证据链 + 置信度评分)        |                               |  (SOP 手册切片库) |
+|  🤖 Qwen 3.5 本地推理引擎   | <==== (RAG 增强检索) ==== |  📚 知识工程引擎  |
+|  (Ollama / 4B 参数)         |                               |  (SOP 手册切片库) |
 +-------------------------------+                                 +-----------------+
         |
         v
@@ -136,15 +136,15 @@ corepack enable
 pnpm install
 ```
 
-### 配置 AI API 密钥（可选）
+### 配置后端引擎地址
 
-在项目根目录创建 `.env.local` 文件以启用 Gemini 3.5 Flash 在线推理：
+诊断代理将请求转发至本地后端引擎。在项目根目录创建 `.env.local` 文件：
 
 ```env
-GEMINI_API_KEY="your_google_ai_studio_api_key_here"
+BACKEND_ENGINE_URL="http://localhost:8000"
 ```
 
-未配置密钥时，AI 诊断会自动回退到 `lib/db.ts` 中的启发式引擎。
+引擎运行 **Qwen 3.5 (4B)** 进行深度推理，**Qwen3-Embedding (0.6B)** 用于 RAG 知识检索。未配置此地址时，诊断请求将返回网关错误。
 
 ### 启动开发服务器
 
