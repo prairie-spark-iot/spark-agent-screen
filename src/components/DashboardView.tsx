@@ -2,7 +2,7 @@ import React from 'react';
 import { Alert, Device } from '../types';
 import { useTranslation } from '../i18n/context';
 import { KpiCard } from './dashboard/KpiCard';
-import { TelemetryChart, type TelemetryPoint } from './dashboard/TelemetryChart';
+import { TelemetryChart, type TelemetryPoint, METRICS_CONFIG } from './dashboard/TelemetryChart';
 import { RecentAlertsFeed } from './dashboard/RecentAlertsFeed';
 import { TELEMETRY_LABELS } from '@/lib/adapters/deviceAdapter';
 
@@ -35,7 +35,7 @@ export default function DashboardView({ alerts, devices, onNavigate, onDiagnose 
     };
   }, [devices, alerts]);
 
-  // Compile real-time telemetry points for chart from device sparkline data
+  // Compile real-time telemetry points for chart from device sparkline data for ALL metrics
   const telemetryData = React.useMemo<TelemetryPoint[]>(() => {
     const averageSparkline = (devs: Device[]): number[] => {
       if (devs.length === 0) return [];
@@ -46,18 +46,34 @@ export default function DashboardView({ alerts, devices, onNavigate, onDiagnose 
       });
     };
 
-    const tempData = averageSparkline(devices.filter(d => d.metricName === TELEMETRY_LABELS.temperature));
-    const pressData = averageSparkline(devices.filter(d => d.metricName === TELEMETRY_LABELS.pressure));
-    const len = Math.max(tempData.length, pressData.length, 1);
+    const series = Object.entries(METRICS_CONFIG).map(([key, config]) => ({
+      key,
+      values: averageSparkline(devices.filter(d => d.metricName === TELEMETRY_LABELS[config.labelKey])),
+    }));
+
+    const len = Math.max(...series.map(s => s.values.length), 1);
 
     const now = new Date();
     return Array.from({ length: len }, (_, i) => {
       const t = new Date(now.getTime() - (len - 1 - i) * 2 * 60000);
-      return {
+      const point: TelemetryPoint = {
         time: `${String(t.getHours()).padStart(2, '0')}:${String(t.getMinutes()).padStart(2, '0')}`,
-        temp: tempData[i] !== undefined ? Math.round(tempData[i] * 10) / 10 : 0,
-        press: pressData[i] !== undefined ? Math.round(pressData[i] * 100) / 100 : 0,
+        temp: 0,
+        press: 0,
+        current: 0,
+        speed: 0,
+        humidity: 0,
       };
+      for (const s of series) {
+        const val = s.values[i];
+        if (val !== undefined) {
+          const p = point as unknown as Record<string, number | string>;
+          p[s.key] = s.key === 'press'
+            ? Math.round(val * 100) / 100
+            : Math.round(val * 10) / 10;
+        }
+      }
+      return point;
     });
   }, [devices]);
 

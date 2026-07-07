@@ -6,7 +6,19 @@ export interface TelemetryPoint {
   time: string;
   temp: number;
   press: number;
+  current: number;
+  speed: number;
+  humidity: number;
 }
+
+/** Chart metric config keyed by dataKey — labelKey maps to TELEMETRY_LABELS in deviceAdapter. */
+export const METRICS_CONFIG: Record<string, { labelKey: string; color: string; unit: string }> = {
+  temp: { labelKey: 'temperature', color: '#00cfbf', unit: '°C' },
+  press: { labelKey: 'pressure', color: '#ffba43', unit: 'kPa' },
+  current: { labelKey: 'current', color: '#64b5f6', unit: 'A' },
+  speed: { labelKey: 'speed', color: '#ce93d8', unit: 'rpm' },
+  humidity: { labelKey: 'humidity', color: '#81c784', unit: '%' },
+};
 
 interface TelemetryChartProps {
   data: TelemetryPoint[];
@@ -15,21 +27,28 @@ interface TelemetryChartProps {
 export const TelemetryChart = React.memo(function TelemetryChart({ data }: TelemetryChartProps) {
   const { t } = useTranslation();
 
+  const activeMetrics = data.length > 0
+    ? (Object.keys(METRICS_CONFIG) as (keyof typeof METRICS_CONFIG)[]).filter(k => k in data[0])
+    : [];
+
   return (
     <div className="bg-[#141822] border border-[#2d3240] rounded-xl p-5 flex flex-col h-96 relative overflow-hidden transition-all hover:border-[#00cfbf]/40 shadow-md">
       <div className="flex justify-between items-center pb-4 border-b border-[#2d3240] mb-4 z-10">
         <div>
           <h3 className="font-sans text-base font-bold text-white tracking-wide">{t('liveTelemetry')}</h3>
         </div>
-        <div className="flex gap-5">
-          <div className="flex items-center gap-2">
-            <span className="w-3.5 h-1.5 bg-[#00cfbf] rounded-full shadow-[0_0_8px_rgba(0,207,191,0.5)]"></span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">{t('temperature')} (°C)</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="w-3.5 h-1.5 bg-[#ffba43] rounded-full shadow-[0_0_8px_rgba(255,186,67,0.5)]"></span>
-            <span className="font-mono text-xs font-bold uppercase tracking-wider text-[#ffebd8]">{t('pressure')} (kPa)</span>
-          </div>
+        <div className="flex gap-5 flex-wrap">
+          {activeMetrics.map(key => (
+            <div key={key} className="flex items-center gap-2">
+              <span
+                className="w-3.5 h-1.5 rounded-full"
+                style={{ backgroundColor: METRICS_CONFIG[key].color, boxShadow: `0 0 8px ${METRICS_CONFIG[key].color}80` }}
+              ></span>
+              <span className="font-mono text-xs font-bold uppercase tracking-wider text-white">
+                {t(METRICS_CONFIG[key].labelKey)} ({METRICS_CONFIG[key].unit})
+              </span>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -38,14 +57,12 @@ export const TelemetryChart = React.memo(function TelemetryChart({ data }: Telem
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
             <defs>
-              <linearGradient id="colorTemp" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#00cfbf" stopOpacity={0.35}/>
-                <stop offset="95%" stopColor="#00cfbf" stopOpacity={0}/>
-              </linearGradient>
-              <linearGradient id="colorPress" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#ffba43" stopOpacity={0.35}/>
-                <stop offset="95%" stopColor="#ffba43" stopOpacity={0}/>
-              </linearGradient>
+              {activeMetrics.map(key => (
+                <linearGradient key={key} id={`color${key.charAt(0).toUpperCase()}${key.slice(1)}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={METRICS_CONFIG[key].color} stopOpacity={0.35}/>
+                  <stop offset="95%" stopColor={METRICS_CONFIG[key].color} stopOpacity={0}/>
+                </linearGradient>
+              ))}
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#2d3240" vertical={false} />
             <XAxis 
@@ -72,31 +89,25 @@ export const TelemetryChart = React.memo(function TelemetryChart({ data }: Telem
                 boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
               }}
               formatter={(value: number, name: string) => {
-                if (name === t('temperature')) return [value.toFixed(1), name];
-                if (name === t('pressure')) return [value.toFixed(2), name];
+                // Recharts passes dataKey as name — check against known keys
+                if (name === 'temp' || name === 'current' || name === 'speed' || name === 'humidity') return [value.toFixed(1), name];
+                if (name === 'press') return [value.toFixed(2), name];
                 return [value, name];
               }}
             />
-            <Area 
-              type="monotone" 
-              dataKey="temp" 
-              name={t('temperature')}
-              stroke="#00cfbf" 
-              strokeWidth={1.5}
-              fillOpacity={1} 
-              fill="url(#colorTemp)" 
-              dot={false}
-            />
-            <Area 
-              type="monotone" 
-              dataKey="press" 
-              name={t('pressure')}
-              stroke="#ffba43" 
-              strokeWidth={1.5}
-              fillOpacity={1} 
-              fill="url(#colorPress)" 
-              dot={false}
-            />
+            {activeMetrics.map(key => (
+              <Area
+                key={key}
+                type="monotone"
+                dataKey={key}
+                name={t(METRICS_CONFIG[key].labelKey)}
+                stroke={METRICS_CONFIG[key].color}
+                strokeWidth={1.5}
+                fillOpacity={1}
+                fill={`url(#color${key.charAt(0).toUpperCase()}${key.slice(1)})`}
+                dot={false}
+              />
+            ))}
           </AreaChart>
         </ResponsiveContainer>
       </div>
