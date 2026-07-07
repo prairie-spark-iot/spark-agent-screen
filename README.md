@@ -7,6 +7,7 @@
 ### Industrial AI Telemetry Diagnostic & RAG-Powered Remediation Platform  
 *(工业智能物联网故障推理与自适应修复诊断系统)*
 
+[![Version](https://img.shields.io/badge/Version-1.0.0-00cfbf?style=for-the-badge&logo=semver&logoColor=0B0E14)](https://github.com/kunlong-luo/spark-iot-agent)
 [![React](https://img.shields.io/badge/Frontend-React%2019-00cfbf?style=for-the-badge&logo=react&logoColor=0B0E14)](https://react.dev/)
 [![Next.js](https://img.shields.io/badge/Framework-Next.js%2015-ffffff?style=for-the-badge&logo=next.js&logoColor=0B0E14)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript%205.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
@@ -193,5 +194,5 @@ Note: there is no `pnpm test` script; use `npx vitest run` directly.
 ---
 
 <div align="center">
-  <p><b>Built with engineering precision by Spark IoT Systems.</b></p>
+  <p><b>Built with engineering precision by Spark IoT Systems.</b> — v1.0.0</p>
 </div>

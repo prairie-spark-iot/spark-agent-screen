@@ -952,8 +952,12 @@ export const translations: Translations = {
     en: "Authentication failed: Invalid operator credentials. Please use admin / admin123456.",
     zh: "身份认证失败：操作员账号或密码错误。请使用 admin / admin123456。"
   },
+  version: {
+    en: "v1.0.0",
+    zh: "v1.0.0"
+  },
   logoutBtn: {
-    en: "Logout Gateway",
+    en: "Logout",
     zh: "退出登录"
   }
 };

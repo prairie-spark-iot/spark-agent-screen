@@ -135,6 +135,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
             {t('logoutBtn')}
           </button>
         )}
+
+        {/* App version */}
+        <div className="pt-2 text-center">
+          <span className="font-mono text-[10px] text-[#667475] tracking-wider">{t('version')}</span>
+        </div>
       </div>
     </aside>
   );
