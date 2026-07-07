@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Alert, Device, Doc } from './types';
@@ -12,7 +12,7 @@ import { Sidebar, TopNavbar, MobileBottomNav, SystemInfoModal } from './componen
 import { LoginView } from './components/LoginView';
 import { useTranslation } from './i18n/context';
 import sparkLogo from './assets/images/spark_logo_1783157836702.jpg';
-import { useDevices, useAddDevice, useUpdateDeviceStatusLocal, addFallbackDeviceToCache } from '@/src/features/devices/hooks';
+import { useDevices, useAddDevice, useUpdateDeviceStatusLocal } from '@/src/features/devices/hooks';
 import { useDeviceStatusWS } from '@/src/features/devices/useDeviceStatusWS';
 import { useAlerts, useDiagnoseAlert, useApproveAlertAction, useAutoDiagnoseAllAlerts } from '@/src/features/alerts/hooks';
 import { useAlertWS } from '@/src/features/alerts/useAlertWS';
@@ -134,7 +134,7 @@ export default function App() {
     }
   };
 
-  // 4. Add custom device node handler
+  // 4. Add custom device node handler — no fallback; API failure surfaces as a toast error
   const handleAddDevice = async (deviceData: {
     name: string;
     location: string;
@@ -144,25 +144,8 @@ export default function App() {
     status: 'ONLINE' | 'OFFLINE' | 'WARNING';
   }) => {
     try {
-      let newDev: Device;
-      try {
-        newDev = await addDeviceMutation.mutateAsync(deviceData);
-      } catch (apiErr) {
-        newDev = {
-          id: `dev-${Date.now()}`,
-          name: deviceData.name,
-          location: deviceData.location || 'General Area',
-          metricName: deviceData.metricName,
-          value: deviceData.initialValue || '0',
-          unit: deviceData.unit || '',
-          status: deviceData.status || 'ONLINE',
-          sparkline: Array(9).fill(parseFloat(deviceData.initialValue) || 0),
-          icon: 'router'
-        };
-        addFallbackDeviceToCache(queryClient, newDev);
-      }
-
-      triggerNotification(`Node "${newDev.name}" successfully provisioned at ${newDev.location}.`);
+      await addDeviceMutation.mutateAsync(deviceData);
+      triggerNotification(`Node "${deviceData.name}" successfully provisioned at ${deviceData.location}.`);
     } catch (err: any) {
       console.error(err);
       triggerNotification('Error: Failed to register custom telemetry node.');
@@ -187,8 +170,8 @@ export default function App() {
     setActiveTab(tab);
   };
 
-  // Selected Alert for diagnosis-detail page
-  const selectedAlert = alerts.find(a => a.id === selectedAlertId) || null;
+  // Selected Alert for diagnosis-detail page — memoized to avoid re-scan on every render
+  const selectedAlert = useMemo(() => alerts.find(a => a.id === selectedAlertId) || null, [alerts, selectedAlertId]);
 
   if (!isLoggedIn) {
     return <LoginView logoSrc={logoSrc} onLoginSuccess={handleLoginSuccess} />;

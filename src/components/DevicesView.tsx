@@ -110,7 +110,7 @@ export default function DevicesView({ devices, onAddDevice, onUpdateStatus }: De
 
         <div className="bg-[#141822] border border-[#2d3240] rounded-xl p-4 flex items-center justify-between shadow-sm">
           <div>
-            <p className="font-mono text-[11px] font-bold tracking-wider text-[#b9cacb] uppercase">{t('avgResponseTime')}</p>
+            <p className="font-mono text-[11px] font-bold tracking-wider text-[#b9cacb] uppercase">{t('avgResponseTime')} <span className="text-[10px] font-normal text-[#667475] tracking-normal normal-case">(simulated)</span></p>
              <p className="font-mono text-2xl font-extrabold text-white mt-1">
                {avgResponseTime !== '--' ? avgResponseTime : '--'}{avgResponseTime !== '--' && <span className="text-sm font-normal text-[#849495] ml-0.5">ms</span>}
             </p>
@@ -212,9 +212,9 @@ export default function DevicesView({ devices, onAddDevice, onUpdateStatus }: De
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredDevices.map((dev, idx) => (
+          {filteredDevices.map((dev) => (
             <DeviceCard 
-              key={`${dev.id}-${idx}`} 
+              key={dev.id} 
               dev={dev} 
               onSelect={(device) => setSelectedDevice(device)} 
             />

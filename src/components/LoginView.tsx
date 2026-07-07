@@ -177,20 +177,15 @@ export const LoginView: React.FC<LoginViewProps> = ({ logoSrc, onLoginSuccess })
 
           {/* Footer security badge inside card */}
           <div className="mt-8 pt-5 border-t border-[#1f2533] flex items-center justify-center gap-2 text-[11px] font-mono text-[#667475]">
-            <span className="material-symbols-outlined text-[14px] text-emerald-400">verified_user</span>
-            <span>AES-256 TLS INDUSTRIAL ENCRYPTION ACTIVE</span>
+            <span className="material-symbols-outlined text-[14px] text-[#ffba43]">report</span>
+            <span>DEMO MODE — NO REAL ENCRYPTION</span>
           </div>
         </div>
       </main>
 
-      {/* Bottom status bar */}
-      <footer className="relative z-10 py-4 px-6 text-center border-t border-[#1f2533]/60 bg-[#0B0E14]/80 text-xs font-mono text-[#667475] flex flex-col sm:flex-row items-center justify-between gap-2 sm:px-12">
+      {/* Bottom status bar — static footer, no fake telemetry claims */}
+      <footer className="relative z-10 py-4 px-6 text-center border-t border-[#1f2533]/60 bg-[#0B0E14]/80 text-xs font-mono text-[#667475] sm:px-12">
         <span>© 2026 Spark Industrial AI Monitoring Platform</span>
-        <div className="flex items-center gap-4">
-          <span className="hover:text-[#00cfbf] transition-colors">NODE: US-EAST-1</span>
-          <span>•</span>
-          <span className="hover:text-[#00cfbf] transition-colors">LATENCY: 4.2ms</span>
-        </div>
       </footer>
     </div>
   );
