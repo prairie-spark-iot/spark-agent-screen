@@ -13,9 +13,13 @@ import { LoginView } from './components/LoginView';
 import { useTranslation } from './i18n/context';
 import sparkLogo from './assets/images/spark_logo_1783157836702.jpg';
 import { useDevices, useAddDevice, useUpdateDeviceStatusLocal, addFallbackDeviceToCache } from '@/src/features/devices/hooks';
+import { useDeviceStatusWS } from '@/src/features/devices/useDeviceStatusWS';
 import { useAlerts, useDiagnoseAlert, useApproveAlertAction, useAutoDiagnoseAllAlerts } from '@/src/features/alerts/hooks';
+import { useAlertWS } from '@/src/features/alerts/useAlertWS';
+import { useDiagnosisWS } from '@/src/features/alerts/useDiagnosisWS';
 import { useDocuments, useAddDocumentLocal } from '@/src/features/knowledge/hooks';
 import { useTelemetrySync } from '@/src/features/telemetry/hooks';
+import { useDeviceTelemetryWS } from '@/src/features/telemetry/useTelemetryWS';
 
 const logoSrc = typeof sparkLogo === 'object' && sparkLogo && 'src' in sparkLogo 
   ? (sparkLogo as any).src 
@@ -43,6 +47,14 @@ export default function App() {
   const addDocumentLocal = useAddDocumentLocal();
 
   const { isLoading: loading, isError, error: queryError, refetch } = useTelemetrySync();
+
+  // Real-time push layer — no-ops in mock mode (NEXT_PUBLIC_BACKEND_WS_URL unset). Each hook
+  // writes straight into the telemetryQueryKey cache that useDevices/useAlerts above read from, so
+  // no component below needs to change to receive live updates.
+  useDeviceTelemetryWS();
+  useDeviceStatusWS();
+  useAlertWS();
+  useDiagnosisWS();
 
   // Page level state
   const [diagnosingAll, setDiagnosingAll] = useState(false);

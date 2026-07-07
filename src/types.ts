@@ -14,6 +14,11 @@ export interface Alert {
   details?: string;
   icon?: string;
   diagnosis?: DiagnosisReport;
+  // BaseEntity.updateTime from the engine, carried through only on alerts sourced from a WS push
+  // (see lib/adapters/alertAdapter.ts, src/lib/ws/merge.ts) — used for last-write-wins ordering
+  // between the /topic/alerts and /topic/diagnosis/{alertId} push paths, which have no relative
+  // ordering guarantee between them. Absent on alerts sourced from REST.
+  updateTime?: string;
 }
 
 export interface DiagnosisReport {
