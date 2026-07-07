@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { mapEngineDeviceToUiDevice, EngineDevice } from '../lib/adapters/deviceAdapter';
+import { mapEngineDeviceToUiDevice, EngineDevice, identifierForMetricName, applyTelemetrySnapshot } from '../lib/adapters/deviceAdapter';
+import { Device } from '../src/types';
 
 describe('mapEngineDeviceToUiDevice', () => {
   it('maps an online device with telemetry to the legacy single-metric Device shape', () => {
@@ -182,5 +183,60 @@ describe('mapEngineDeviceToUiDevice', () => {
 
     expect(device.metricName).toBe('PRESSURE');
     expect(device.value).toBe('5.0');
+  });
+});
+
+describe('identifierForMetricName', () => {
+  it('reverses a known TELEMETRY_LABELS entry back to its raw identifier', () => {
+    expect(identifierForMetricName('TEMPERATURE')).toBe('temperature');
+    expect(identifierForMetricName('PRESSURE')).toBe('pressure');
+  });
+
+  it('falls back to lowercasing an unrecognized label', () => {
+    expect(identifierForMetricName('CUSTOM_METRIC')).toBe('custom_metric');
+  });
+});
+
+describe('applyTelemetrySnapshot', () => {
+  function baseDevice(overrides: Partial<Device> = {}): Device {
+    return {
+      id: 'DK_INJ_001',
+      name: '1号注塑机',
+      status: 'ONLINE',
+      location: 'Unassigned',
+      metricName: 'TEMPERATURE',
+      value: '235.5',
+      unit: '℃',
+      sparkline: [230, 231, 232, 233, 234, 235, 235.2, 235.4, 235.5],
+      icon: 'precision_manufacturing',
+      ...overrides,
+    };
+  }
+
+  it('updates value and slides the sparkline window when the snapshot has the device primary metric', () => {
+    const device = baseDevice();
+
+    const updated = applyTelemetrySnapshot(device, { properties: { temperature: 236.1 } });
+
+    expect(updated.value).toBe('236.1');
+    expect(updated.sparkline).toHaveLength(9);
+    expect(updated.sparkline[8]).toBe(236.1);
+    expect(updated.sparkline[0]).toBe(231); // oldest point dropped
+  });
+
+  it('returns the same device reference when the snapshot has no matching property', () => {
+    const device = baseDevice();
+
+    const updated = applyTelemetrySnapshot(device, { properties: { pressure: 100 } });
+
+    expect(updated).toBe(device);
+  });
+
+  it('returns the same device reference when the matching value is non-numeric', () => {
+    const device = baseDevice();
+
+    const updated = applyTelemetrySnapshot(device, { properties: { temperature: 'N/A' } });
+
+    expect(updated).toBe(device);
   });
 });
