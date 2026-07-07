@@ -25,7 +25,7 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
 
   useEffect(() => {
     if (dev) {
-      setPingLatency(12);
+      setPingLatency(dev.status === 'ONLINE' ? 12 : null);
       setActionState('idle');
       setLastCommandLog(`${t('cmdSysReady')}${dev.id}`);
     }
@@ -137,10 +137,17 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
             <div className="bg-[#0b0e15] border border-[#222630] rounded-xl p-4 flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-medium text-[#849495]">{dev.metricName}</span>
-                <span className="flex items-center gap-1 text-[11px] font-mono text-[#00cfbf]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00cfbf] animate-ping"></span>
-                  {t('liveStreamStatus')}
-                </span>
+                {dev.status === 'OFFLINE' ? (
+                  <span className="flex items-center gap-1 text-[11px] font-mono text-[#849495]">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#849495]"></span>
+                    {t('OFFLINE')}
+                  </span>
+                ) : (
+                  <span className={`flex items-center gap-1 text-[11px] font-mono ${dev.status === 'WARNING' ? 'text-[#ffba43]' : 'text-[#00cfbf]'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${dev.status === 'WARNING' ? 'bg-[#ffba43]' : 'bg-[#00cfbf]'} animate-ping`}></span>
+                    {t('liveStreamStatus')}
+                  </span>
+                )}
               </div>
               <div className="mt-3 flex items-baseline gap-1.5">
                 <span className="font-mono text-3xl font-extrabold text-white">{dev.value}</span>
@@ -158,8 +165,17 @@ export const DeviceDetailModal: React.FC<DeviceDetailModalProps> = ({
                 </span>
               </div>
               <div className="mt-3 flex items-baseline gap-2">
-                <span className="font-mono text-3xl font-extrabold text-white">{pingLatency !== null ? `${pingLatency} ms` : '--'}</span>
-                <span className="text-xs text-[#00cfbf] font-medium">{t('packetLossZero')}</span>
+                {dev.status === 'OFFLINE' ? (
+                  <>
+                    <span className="font-mono text-3xl font-extrabold text-[#849495]">--</span>
+                    <span className="text-xs text-[#849495] font-medium">{t('OFFLINE')}</span>
+                  </>
+                ) : (
+                  <>
+                    <span className="font-mono text-3xl font-extrabold text-white">{pingLatency !== null ? `${pingLatency} ms` : '--'}</span>
+                    <span className="text-xs text-[#00cfbf] font-medium">{t('packetLossZero')}</span>
+                  </>
+                )}
               </div>
             </div>
 

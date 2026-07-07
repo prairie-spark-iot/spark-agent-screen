@@ -28,7 +28,7 @@ export default function AlertsView({
   const { t, language } = useTranslation();
   const [activeSeverityTab, setActiveSeverityTab] = useState<'All' | Severity>('All');
   const [localSearch, setLocalSearch] = useState('');
-  const [timeRange, setTimeRange] = useState<'24h' | '1h' | '7d' | 'all'>('24h');
+  const [timeRange, setTimeRange] = useState<'1h' | '24h' | '7d' | 'all'>('24h');
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
@@ -40,13 +40,14 @@ export default function AlertsView({
   };
 
   const cycleTimeRange = () => {
-    const order: Array<'24h' | '1h' | '7d' | 'all'> = ['24h', '1h', '7d', 'all'];
+    const order: Array<'1h' | '24h' | '7d' | 'all'> = ['1h', '24h', '7d', 'all'];
     const nextIdx = (order.indexOf(timeRange) + 1) % order.length;
     setTimeRange(order[nextIdx]);
   };
 
   const getTimeRangeLabel = () => {
     if (timeRange === '1h') return t('timeLast1h');
+    if (timeRange === '24h') return t('timeLast24h');
     if (timeRange === '7d') return t('timeLast7d');
     if (timeRange === 'all') return t('timeAll');
     return t('last24Hours');
@@ -74,14 +75,9 @@ export default function AlertsView({
     document.body.removeChild(link);
   };
 
-  // Counts for tabs
-  const countAll = alerts.length;
-  const countCritical = alerts.filter(a => a.severity === 'Critical').length;
-  const countWarning = alerts.filter(a => a.severity === 'Warning').length;
-  const countInfo = alerts.filter(a => a.severity === 'Info').length;
-
-  // Filter alerts
-  const filteredAlerts = React.useMemo(() => {
+  // Pre-filter by time range only — severity tab counts come from this,
+  // so they always match the filtered table data instead of showing unfiltered totals.
+  const timeFilteredAlerts = React.useMemo(() => {
     const now = Date.now();
     const timeRangeCutoff: Record<string, number> = {
       '1h': now - 60 * 60 * 1000,
@@ -90,14 +86,22 @@ export default function AlertsView({
       'all': 0,
     };
     const cutoff = timeRangeCutoff[timeRange] ?? 0;
-
+    if (cutoff === 0) return alerts;
     return alerts.filter(a => {
-      // Time range filter
-      if (cutoff > 0) {
-        const alertTime = Date.parse(a.timestamp);
-        if (isNaN(alertTime) || alertTime < cutoff) return false;
-      }
+      const alertTime = Date.parse(a.timestamp);
+      return !isNaN(alertTime) && alertTime >= cutoff;
+    });
+  }, [alerts, timeRange]);
 
+  // Counts for severity tabs (based on time-filtered data)
+  const countAll = timeFilteredAlerts.length;
+  const countCritical = timeFilteredAlerts.filter(a => a.severity === 'Critical').length;
+  const countWarning = timeFilteredAlerts.filter(a => a.severity === 'Warning').length;
+  const countInfo = timeFilteredAlerts.filter(a => a.severity === 'Info').length;
+
+  // Full filter (time + severity tab + search query)
+  const filteredAlerts = React.useMemo(() => {
+    return timeFilteredAlerts.filter(a => {
       // Severity tab filter
       if (activeSeverityTab !== 'All' && a.severity !== activeSeverityTab) {
         return false;
@@ -113,7 +117,7 @@ export default function AlertsView({
       }
       return true;
     });
-  }, [alerts, activeSeverityTab, localSearch, timeRange]);
+  }, [timeFilteredAlerts, activeSeverityTab, localSearch]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / pageSize));

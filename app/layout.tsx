@@ -27,14 +27,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} dark`}>
+    <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} dark`} suppressHydrationWarning>
       <head>
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200"
         />
       </head>
-      <body className="bg-[#0B0E14] text-[#e0e2ec] antialiased overflow-hidden selection:bg-[#00cfbf]/30 selection:text-[#00cfbf]">
+      <body className="bg-[#0B0E14] text-[#e0e2ec] antialiased overflow-hidden selection:bg-[#00cfbf]/30 selection:text-[#00cfbf]" suppressHydrationWarning>
         <QueryProvider>
           <I18nProvider>
             {children}

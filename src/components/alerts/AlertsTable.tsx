@@ -65,7 +65,7 @@ const deviceIconFor = (icon?: string) => {
 function getHeaderCellClassName(columnId: string): string {
   switch (columnId) {
     case 'index': return 'px-3 py-3 w-10 h-auto border-b-0 text-[#849495] text-center';
-    case 'time': return 'px-5 py-3 w-28 h-auto border-b-0 text-[#e2e8f0]';
+    case 'time': return 'px-5 py-3 w-36 h-auto border-b-0 text-[#e2e8f0]';
     case 'triggerValue': return 'px-5 py-3 text-right w-32 h-auto border-b-0 text-[#e2e8f0]';
     case 'severity': return 'px-5 py-3 w-28 h-auto border-b-0 text-[#e2e8f0]';
     case 'status': return 'px-5 py-3 w-40 h-auto border-b-0 text-[#e2e8f0]';
@@ -120,9 +120,21 @@ export const AlertsTable = React.memo(function AlertsTable({
       header: '#',
       cell: (ctx) => ctx.row.index + 1,
     }),
-    columnHelper.accessor('time', {
+    columnHelper.display({
       id: 'time',
       header: t('timeUtc'),
+      cell: ({ row }) => {
+        const ts = row.original.timestamp;
+        if (!ts) return <span>{row.original.time}</span>;
+        const d = new Date(ts);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        const secs = String(d.getSeconds()).padStart(2, '0');
+        return <span>{`${year}-${month}-${day} ${hours}:${mins}:${secs}`}</span>;
+      },
     }),
     columnHelper.display({
       id: 'device',

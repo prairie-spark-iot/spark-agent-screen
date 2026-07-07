@@ -5,7 +5,6 @@ interface SidebarProps {
   logoSrc: string;
   activeTab: string;
   activeNodeLabel: string;
-  pendingAlertsCount: number;
   onNavigate: (tab: string) => void;
   onOpenNodeModal: () => void;
   onOpenInfoModal: () => void;
@@ -16,7 +15,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
   logoSrc,
   activeTab,
   activeNodeLabel,
-  pendingAlertsCount,
   onNavigate,
   onOpenNodeModal,
   onOpenInfoModal,
@@ -103,11 +101,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         >
           <span className="material-symbols-outlined text-[18px]">warning</span>
           {t('alerts')}
-          {pendingAlertsCount > 0 && (
-            <span className="ml-auto font-mono text-[9px] font-extrabold bg-[#ffb4ab] text-[#0B0E14] px-1.5 py-0.5 rounded-full border border-[#0B0E14] animate-pulse shadow-md">
-              {pendingAlertsCount}
-            </span>
-          )}
         </button>
 
         <button 

@@ -99,9 +99,7 @@ export const TopNavbar: React.FC<TopNavbarProps> = ({
         >
           <span className="material-symbols-outlined text-[18px]">notifications</span>
           {pendingAlertsCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#ffb4ab] text-[#0B0E14] font-mono text-[9px] font-extrabold rounded-full flex items-center justify-center border border-[#0B0E14] animate-bounce shadow-md">
-              {pendingAlertsCount}
-            </span>
+            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-[#ffb4ab] rounded-full animate-pulse shadow-[0_0_6px_#ffb4ab]"></span>
           )}
         </button>
 

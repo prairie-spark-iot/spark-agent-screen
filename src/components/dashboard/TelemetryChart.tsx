@@ -59,7 +59,8 @@ export const TelemetryChart = React.memo(function TelemetryChart({ data }: Telem
               stroke="#d1d5db" 
               tickLine={false} 
               axisLine={{ stroke: '#2d3240' }}
-              tick={{ fill: '#d1d5db', fontFamily: 'JetBrains Mono', fontSize: 11 }} 
+              tick={{ fill: '#d1d5db', fontFamily: 'JetBrains Mono', fontSize: 11 }}
+              tickFormatter={(v: number) => v % 1 === 0 ? `${v}` : v.toFixed(1)}
             />
             <Tooltip 
               contentStyle={{ 
@@ -69,7 +70,12 @@ export const TelemetryChart = React.memo(function TelemetryChart({ data }: Telem
                 color: '#ffffff',
                 fontFamily: 'Inter, sans-serif',
                 boxShadow: '0 4px 20px rgba(0,0,0,0.5)'
-              }} 
+              }}
+              formatter={(value: number, name: string) => {
+                if (name === t('temperature')) return [value.toFixed(1), name];
+                if (name === t('pressure')) return [value.toFixed(2), name];
+                return [value, name];
+              }}
             />
             <Area 
               type="monotone" 

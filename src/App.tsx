@@ -220,7 +220,6 @@ export default function App() {
         logoSrc={logoSrc}
         activeTab={activeTab}
         activeNodeLabel={activeNodeLabel}
-        pendingAlertsCount={alerts.filter(a => a.status === 'Pending').length}
         onNavigate={handleNavigate}
         onOpenNodeModal={() => setShowNodeModal(true)}
         onOpenInfoModal={() => setShowInfoModal(true)}

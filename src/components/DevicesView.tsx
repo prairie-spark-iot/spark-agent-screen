@@ -212,9 +212,9 @@ export default function DevicesView({ devices, onAddDevice, onUpdateStatus }: De
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filteredDevices.map((dev) => (
+          {filteredDevices.map((dev, idx) => (
             <DeviceCard 
-              key={dev.id} 
+              key={`${dev.id}-${idx}`} 
               dev={dev} 
               onSelect={(device) => setSelectedDevice(device)} 
             />

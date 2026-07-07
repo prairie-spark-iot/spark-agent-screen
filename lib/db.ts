@@ -1,5 +1,26 @@
 import { Alert, Device, Doc } from "@/src/types";
 
+/**
+ * Per-metric decimal precision for display values.
+ * TEMPERATURE / LOAD: 1 decimal (84.2°C, 82.1%)
+ * PRESSURE / VIBRATION / CURRENT: 2 decimals (12.40 MPa, 4.80 mm/s)
+ * AIRFLOW / SPEED: 0 decimals (1250 CFM)
+ */
+const METRIC_DECIMALS: Record<string, number> = {
+  TEMPERATURE: 1,
+  PRESSURE: 2,
+  VIBRATION: 2,
+  CURRENT: 2,
+  SPEED: 0,
+  AIRFLOW: 0,
+  LOAD: 1,
+};
+
+function formatMetricValue(value: number, metricName: string): string {
+  const dp = METRIC_DECIMALS[metricName] ?? 1;
+  return value.toFixed(dp);
+}
+
 // In-Memory Database State Initializers
 export const initialAlerts = (): Alert[] => [
   {
@@ -177,7 +198,7 @@ export const initialDevices = (): Device[] => [
     name: '1号注塑机',
     status: 'ONLINE',
     location: 'Floor A - Section 1',
-    metricName: 'CORE TEMP',
+    metricName: 'TEMPERATURE',
     value: '84.2',
     unit: '°C',
     sparkline: [62, 65, 58, 74, 69, 81, 78, 84, 82],
@@ -189,7 +210,7 @@ export const initialDevices = (): Device[] => [
     status: 'ONLINE',
     location: 'Basement - Sector C',
     metricName: 'PRESSURE',
-    value: '12.4',
+    value: '12.40',
     unit: 'MPa',
     sparkline: [12.1, 12.3, 11.9, 12.5, 12.2, 12.4, 12.3, 12.4, 12.4],
     icon: 'water_damage'
@@ -222,7 +243,7 @@ export const initialDevices = (): Device[] => [
     status: 'WARNING',
     location: 'Floor A - Section 3',
     metricName: 'VIBRATION',
-    value: '4.8',
+    value: '4.80',
     unit: 'mm/s',
     sparkline: [2.1, 4.5, 2.3, 5.2, 3.1, 4.8, 3.9, 5.1, 4.8],
     icon: 'precision_manufacturing'
@@ -322,8 +343,8 @@ export const db = {
                     timestamp: new Date().toISOString(),
                     device: dev.name,
                     metric: dev.metricName,
-                    triggerValue: `${newVal.toFixed(1)} ${dev.unit}`,
-                    threshold: `${safeThreshold} ${dev.unit}`,
+                    triggerValue: `${formatMetricValue(newVal, dev.metricName)} ${dev.unit}`,
+                    threshold: `${formatMetricValue(safeThreshold, dev.metricName)} ${dev.unit}`,
                     severity: 'Critical',
                     status: 'Pending',
                     details: `Automated closed-loop trigger: Continuous upward physical drift detected (${globalThis._driftCounters[dev.id]} consecutive anomaly cycles).`
@@ -334,15 +355,15 @@ export const db = {
                 return {
                   ...dev,
                   status: 'WARNING',
-                  value: newVal.toFixed(1),
-                  sparkline: [...dev.sparkline.slice(1), parseFloat(newVal.toFixed(1))]
+                  value: formatMetricValue(newVal, dev.metricName),
+                  sparkline: [...dev.sparkline.slice(1), parseFloat(formatMetricValue(newVal, dev.metricName))]
                 };
               }
 
               return {
                 ...dev,
-                value: newVal.toFixed(1),
-                sparkline: [...dev.sparkline.slice(1), parseFloat(newVal.toFixed(1))]
+                value: formatMetricValue(newVal, dev.metricName),
+                sparkline: [...dev.sparkline.slice(1), parseFloat(formatMetricValue(newVal, dev.metricName))]
               };
             });
           }

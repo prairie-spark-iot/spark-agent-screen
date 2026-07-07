@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Alert, Device, Doc } from '@/src/types';
 import { EngineAlert, mapEngineAlertToUiAlert } from '@/lib/adapters/alertAdapter';
-import { EngineDevice, mapEngineDeviceToUiDevice } from '@/lib/adapters/deviceAdapter';
+import { EngineDevice, mapEngineDeviceToUiDevice, withRealSparkline } from '@/lib/adapters/deviceAdapter';
 
 export async function GET() {
   const baseUrl = process.env.BACKEND_ENGINE_URL;
@@ -27,7 +27,8 @@ export async function GET() {
     try {
       const res = await fetch(`${baseUrl}/api/devices`, { cache: 'no-store' });
       const body: { code: number; msg: string; data: EngineDevice[] } = await res.json();
-      devicesData = body.data.map(mapEngineDeviceToUiDevice);
+      const mapped = body.data.map(mapEngineDeviceToUiDevice);
+      devicesData = await Promise.all(mapped.map(d => withRealSparkline(baseUrl!, d)));
     } catch (err) {
       console.error('[BFF][sync] engine device fetch failed:', err);
       return NextResponse.json({ error: 'Engine devices unreachable' }, { status: 502 });

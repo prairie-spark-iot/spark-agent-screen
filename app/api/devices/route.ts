@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Device } from '@/src/types';
-import { EngineDevice, mapEngineDeviceToUiDevice } from '@/lib/adapters/deviceAdapter';
+import { EngineDevice, mapEngineDeviceToUiDevice, withRealSparkline } from '@/lib/adapters/deviceAdapter';
 
 // BACKEND_SOURCE_DEVICE=engine|mock — strangler-fig flag, see
 // spark-agent-docs/frontend-backend-integration-strategy.md §1. This route's own contract
@@ -16,7 +16,8 @@ async function fetchDevicesFromEngine(): Promise<Device[]> {
   if (body.code !== 0) {
     throw new Error(`engine GET /api/devices error: ${body.msg}`);
   }
-  return body.data.map(mapEngineDeviceToUiDevice);
+  const mapped = body.data.map(mapEngineDeviceToUiDevice);
+  return Promise.all(mapped.map(d => withRealSparkline(baseUrl!, d)));
 }
 
 export async function GET() {

@@ -110,6 +110,7 @@ export function localizeAlert(alert: Alert, language: string): Alert {
   };
 
   const translateDescription = (desc: string): string => {
+    if (!desc) return desc;
     if (descMap[desc]) return descMap[desc];
     if (desc.startsWith('Thermal logs confirm CPU packaging temperature rose')) {
       return `热监测日志确认 CPU 封装温度在 15 分钟内从 65°C 飙升至 ${alert.triggerValue}。风扇转速表显示转速从 4500 骤降至 1200 RPM。`;

@@ -22,7 +22,7 @@ export interface EngineDevice {
 // identifier -> label/unit are BFF-side static lookups rather than a backend change, per
 // phase-1-2-api-data-contracts.md §2 — these rarely change and don't warrant round-tripping
 // through the engine. Sourced from spark-agent-simulator/config.py's PRODUCTS attribute specs.
-const TELEMETRY_LABELS: Record<string, string> = {
+export const TELEMETRY_LABELS: Record<string, string> = {
   temperature: 'TEMPERATURE',
   pressure: 'PRESSURE',
   current: 'CURRENT',
@@ -134,4 +134,65 @@ export function mapEngineDeviceToUiDevice(engineDevice: EngineDevice): Device {
     sparkline: Array(9).fill(sparklinePoint),
     icon: (engineDevice.productKey && PRODUCT_ICONS[engineDevice.productKey]) || DEFAULT_ICON,
   };
+}
+
+export interface EngineDeviceHistoryPoint {
+  deviceKey: string;
+  identifier: string;
+  value: string;
+  valueNum: number | null;
+  quality: number | null;
+  reportTime: string;
+}
+
+const SPARKLINE_LENGTH = 9;
+
+/**
+ * Fetches the last SPARKLINE_LENGTH historical samples for one device/identifier from the engine
+ * and returns them oldest-first (matching the sparkline convention: newest value is always
+ * appended last via applyTelemetrySnapshot's slice(1)+push). Never throws — any failure (network,
+ * non-2xx, empty history, unparseable values) falls back to a flat array of `fallback`, so callers
+ * can always safely use the result as a drop-in replacement for Array(9).fill(fallback).
+ */
+export async function fetchSparklineHistory(
+  baseUrl: string,
+  deviceKey: string,
+  identifier: string,
+  fallback: number
+): Promise<number[]> {
+  const flat = () => Array(SPARKLINE_LENGTH).fill(fallback);
+  try {
+    const res = await fetch(
+      `${baseUrl}/api/device/${encodeURIComponent(deviceKey)}/history?identifier=${encodeURIComponent(identifier)}&limit=${SPARKLINE_LENGTH}`,
+      { cache: 'no-store' }
+    );
+    if (!res.ok) return flat();
+    const body: { code: number; data: EngineDeviceHistoryPoint[] } = await res.json();
+    if (body.code !== 0 || !body.data?.length) return flat();
+
+    const oldestFirst = [...body.data].reverse();
+    const values = oldestFirst
+      .map(p => (typeof p.valueNum === 'number' ? p.valueNum : parseFloat(p.value)))
+      .filter((v): v is number => Number.isFinite(v));
+
+    if (values.length === 0) return flat();
+
+    // Left-pad with the oldest known sample if the device doesn't have SPARKLINE_LENGTH
+    // samples yet (e.g. just provisioned) — callers (DeviceCard) index sparkline[0..8]
+    // directly and require exactly this length.
+    return values.length < SPARKLINE_LENGTH
+      ? [...Array(SPARKLINE_LENGTH - values.length).fill(values[0]), ...values]
+      : values.slice(-SPARKLINE_LENGTH);
+  } catch {
+    return flat();
+  }
+}
+
+/** Replaces a mapped Device's flat-filled sparkline with real history from the engine. Never
+ *  throws (fetchSparklineHistory always resolves), so this is always safe to Promise.all(). */
+export async function withRealSparkline(baseUrl: string, device: Device): Promise<Device> {
+  const identifier = identifierForMetricName(device.metricName);
+  const fallback = parseFloat(device.value);
+  const sparkline = await fetchSparklineHistory(baseUrl, device.id, identifier, Number.isFinite(fallback) ? fallback : 0);
+  return { ...device, sparkline };
 }

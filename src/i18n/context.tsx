@@ -528,9 +528,9 @@ export const translations: Translations = {
     en: "System nominal",
     zh: "系统正常"
   },
-  plus3LastHour: {
-    en: "+3 since last hour",
-    zh: "+3 自上小时起"
+  diagnosesLastHourDelta: {
+    en: "+{count} in the last hour",
+    zh: "近 1 小时 +{count} 条"
   },
   registerNewNodeDesc: {
     en: "Register a new active transceiver node",
