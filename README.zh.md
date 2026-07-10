@@ -7,14 +7,13 @@
 ### 工业物联网管理控制台 — [spark-agent-engine](https://github.com/kunlong-luo/spark-agent-engine) 的 Web 界面  
 *(Industrial IoT Management Dashboard)*
 
-[![Version](https://img.shields.io/badge/版本-1.0.0-00cfbf?style=for-the-badge&logo=semver&logoColor=0B0E14)](https://github.com/kunlong-luo/spark-agent-screen)
-[![React](https://img.shields.io/badge/Frontend-React%2019-00cfbf?style=for-the-badge&logo=react&logoColor=0B0E14)](https://react.dev/)
-[![Next.js](https://img.shields.io/badge/Framework-Next.js%2015-ffffff?style=for-the-badge&logo=next.js&logoColor=0B0E14)](https://nextjs.org/)
-[![TypeScript](https://img.shields.io/badge/Language-TypeScript%205.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
-[![shadcn/ui](https://img.shields.io/badge/UI-shadcn%2Fui%20v4-000000?style=for-the-badge&logo=shadcnui&logoColor=white)](https://ui.shadcn.com/)
-[![Vitest](https://img.shields.io/badge/Tested%20With-Vitest%204.1-FCC72B?style=for-the-badge&logo=vitest&logoColor=0B0E14)](https://vitest.dev/)
-[![License](https://img.shields.io/badge/License-MIT-4c566a?style=for-the-badge)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
+![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)
+![Next.js](https://img.shields.io/badge/Next.js-15-000000?logo=nextdotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.8-3178C6?logo=typescript&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind%20CSS-4-38B2AC?logo=tailwindcss&logoColor=white)
+![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-4-000000?logo=shadcnui&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-4-6DB33F?logo=vitest&logoColor=white)
 
 ---
 
