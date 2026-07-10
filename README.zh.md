@@ -22,6 +22,7 @@
 ## 目录
 
 - [概述](#概述)
+- [界面预览](#界面预览)
 - [系统架构](#系统架构)
 - [核心功能](#核心功能)
 - [技术栈](#技术栈)
@@ -37,6 +38,16 @@
 **Spark Agent Screen** 是 [spark-agent-engine](https://github.com/prairie-spark-iot/spark-agent-engine) 的 Web 管理界面 —— 为工业 IoT 遥测接入、规则告警与 AI 根因诊断平台提供全面的图形化管理控制台，包含设备监控、告警管理、AI 诊断审核与 RAG 知识库管理等功能。
 
 本控制台采用 **BFF（Backend for Frontend）** 模式：将 API 请求代理至引擎，将其 DTO 转换为 UI 友好类型，并内置内存 mock，可在无需引擎的情况下独立运行演示。
+
+## 📸 界面预览
+
+| 页面 | 预览 |
+|------|------|
+| **登录页** | ![登录页](./assets/png/z0.png) |
+| **概览仪表盘** | ![概览仪表盘](./assets/png/z1.png) |
+| **设备监控** | ![设备监控](./assets/png/z2.png) |
+| **告警中心** | ![告警中心](./assets/png/z3.png) |
+| **知识库** | ![知识库](./assets/png/z4.png) |
 
 ## 🏗️ 系统架构
 

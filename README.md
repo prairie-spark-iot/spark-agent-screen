@@ -22,6 +22,7 @@ A Next.js 15 Backend-for-Frontend (BFF) and React 19 SPA — from device telemet
 ## Table of Contents
 
 - [Overview](#overview)
+- [Screenshots](#screenshots)
 - [Architecture](#architecture)
 - [Key Features](#key-features)
 - [Tech Stack](#tech-stack)
@@ -37,6 +38,16 @@ A Next.js 15 Backend-for-Frontend (BFF) and React 19 SPA — from device telemet
 **Spark Agent Screen** is the web management UI for the [spark-agent-engine](https://github.com/prairie-spark-iot/spark-agent-engine) — an industrial IoT telemetry ingestion, rule alerting, and AI root-cause diagnosis platform. It provides a comprehensive graphical interface for device monitoring, alert management, AI diagnosis review, and RAG knowledge base administration.
 
 The UI acts as a **Backend for Frontend (BFF)**: it proxies API requests to the engine, translates its DTOs into UI-friendly shapes, and can fall back to a built-in in-memory mock for standalone demo/dev without the engine running.
+
+## 📸 Screenshots
+
+| Page | Screenshot |
+|------|-----------|
+| **Login** | ![Login](./assets/png/e0.png) |
+| **Dashboard** | ![Dashboard](./assets/png/e1.png) |
+| **Device Monitor** | ![Device Monitor](./assets/png/e2.png) |
+| **Alert Center** | ![Alert Center](./assets/png/e3.png) |
+| **Knowledge Base** | ![Knowledge Base](./assets/png/e4.png) |
 
 ## 🏗️ Architecture
 
