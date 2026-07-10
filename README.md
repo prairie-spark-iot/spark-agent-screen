@@ -1,96 +1,104 @@
 <div align="center">
 
-# ⚡ Spark IoT AI Diagnostic Agent
+# 🖥️ Spark Agent Screen
 
 **English** | [中文](README.zh.md)
 
-### Industrial AI Telemetry Diagnostic & RAG-Powered Remediation Platform  
-*(工业智能物联网故障推理与自适应修复诊断系统)*
+### Industrial IoT Management Dashboard — Web UI for [spark-agent-engine](https://github.com/kunlong-luo/spark-agent-engine)  
+*(工业物联网管理控制台)*
 
-[![Version](https://img.shields.io/badge/Version-1.0.0-00cfbf?style=for-the-badge&logo=semver&logoColor=0B0E14)](https://github.com/kunlong-luo/spark-iot-agent)
+[![Version](https://img.shields.io/badge/Version-1.0.0-00cfbf?style=for-the-badge&logo=semver&logoColor=0B0E14)](https://github.com/kunlong-luo/spark-agent-screen)
 [![React](https://img.shields.io/badge/Frontend-React%2019-00cfbf?style=for-the-badge&logo=react&logoColor=0B0E14)](https://react.dev/)
 [![Next.js](https://img.shields.io/badge/Framework-Next.js%2015-ffffff?style=for-the-badge&logo=next.js&logoColor=0B0E14)](https://nextjs.org/)
 [![TypeScript](https://img.shields.io/badge/Language-TypeScript%205.8-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Qwen](https://img.shields.io/badge/AI-Qwen3.5%20Local-ffba43?style=for-the-badge)](https://github.com/QwenLM/Qwen)
 [![Tailwind CSS](https://img.shields.io/badge/Styling-Tailwind%20v4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![shadcn/ui](https://img.shields.io/badge/UI-shadcn%2Fui%20v4-000000?style=for-the-badge&logo=shadcnui&logoColor=white)](https://ui.shadcn.com/)
 [![Vitest](https://img.shields.io/badge/Tested%20With-Vitest%204.1-FCC72B?style=for-the-badge&logo=vitest&logoColor=0B0E14)](https://vitest.dev/)
 [![License](https://img.shields.io/badge/License-MIT-4c566a?style=for-the-badge)](LICENSE)
 
 ---
 
 <p align="center">
-  <b>Spark IoT AI Agent</b> is built for modern Industrial IoT (IIoT) environments, combining high-frequency sensor telemetry, Retrieval-Augmented Generation (RAG) knowledge retrieval, and <b>local Qwen 3.5 (4B)</b> deep reasoning to deliver millisecond-level fault root-cause tracing, engineering drawing cross-referencing, and closed-loop remediation for complex manufacturing machinery.
+  <b>Spark Agent Screen</b> is the web management console for the <b>spark-agent-engine</b> — an industrial IoT telemetry access, rule alerting, and AI root-cause diagnosis platform. It provides a comprehensive dark-themed dashboard for device monitoring, alert management, AI diagnosis review, and RAG knowledge base administration.
 </p>
 
 </div>
 
 ---
 
-## 🔐 Demo Login
+## 🔗 Project Ecosystem
 
-The system includes a full authentication gateway for operational security.
+| Project | Role |
+|---|---|
+| **spark-agent-screen** (this repo) | Web management UI — Next.js 15 BFF + React 19 SPA |
+| [spark-agent-engine](https://github.com/kunlong-luo/spark-agent-engine) | Industrial IoT engine — telemetry ingestion, alert rules, AI diagnosis, RAG knowledge base (Spring Boot 4 / Java 25) |
+| spark-agent-docs | Integration strategy, API contracts, architecture decisions |
+
+This dashboard acts as a **Backend For Frontend (BFF)**: it proxies API requests to `spark-agent-engine`, translates its DTOs into UI-friendly shapes, and can fall back to a built-in in-memory mock for standalone demo/dev without the engine running.
+
+---
+
+## 🔐 Demo Login
 
 ```text
 Username: admin
 Password: admin123456
 ```
 
-> The login page includes a **Quick Fill** button for one-click access to the telemetry dashboard. Logout is available from the top navbar and sidebar.
+> The login page includes a **Quick Fill** button for one-click access. Auth is client-side only (localStorage) — no real security boundary.
 
 ---
 
-## ✨ Key Features
+## ✨ Features
 
-| Icon | Module | Description |
-| :---: | :--- | :--- |
-| 🛡️ | **Authentication Gateway** | Cyber-industrial login gateway with credential validation, session persistence, and real-time network status indicators. |
-| 🌐 | **Bilingual i18n** | Full English (`en`) and Chinese (`zh`) translation support across login, dashboard, telemetry, SOP recommendations, and charts. Hot-switchable at any time. |
-| 🧠 | **Local LLM Diagnosis** | On threshold breach (vibration, overheating, etc.), automatically extracts multi-dimensional telemetry context and triggers local LLM deep reasoning with confidence-scored remediation timelines. |
-| 📚 | **RAG Knowledge Base** | Upload maintenance manuals, schematics, and log files. AI automatically chunks and embeds content, then cross-references best practices during diagnosis. |
-| 📡 | **Multi-Node Switching** | Hot-switch between distributed factory sector gateways (assembly line, hydraulics, warehouse). Real-time latency ping and online status per node. |
-| 🎛️ | **Industrial Telemetry UI** | Dark cyber-industrial theme with sparkline charts, dynamic pulse node states, and multi-zone device matrix. |
+| Module | Description |
+| :--- | :--- |
+| **Device Monitor** | Real-time device list, status indicators, telemetry sparkline charts, multi-node switching |
+| **Alert Console** | Active alerts with severity classification, threshold context, diagnosis status tracking |
+| **AI Diagnosis** | Trigger root-cause analysis on any alert, view LLM-generated diagnosis (root cause, confidence, remediation suggestions), batch auto-diagnose pending alerts |
+| **Action Approval** | Review and approve AI-proposed remediation actions |
+| **RAG Knowledge Base** | Upload and manage device manuals, SOPs, and technical documents; AI automatically chunks and embeds for semantic retrieval during diagnosis |
+| **Bilingual i18n** | Full English and Chinese UI — hot-switchable at any time |
+| **Industrial Dark Theme** | High-contrast slate design with cyber-teal accents, optimized for control room environments |
 
 ---
 
-## 🏗️ System Architecture
-
-The system uses a modular layered architecture isolating data acquisition, inference, and human-machine interaction:
+## 🏗️ Architecture
 
 ```
-+-----------------------------------------------------------------------------------+
-|                        [ 🔐 Login Gateway ]                                       |
-|                     (admin / admin123456)                                         |
-+-----------------------------------------------------------------------------------+
-                                          | JWT / Session Auth
-                                          v
-+-----------------------------------------------------------------------------------+
-|                        [ 🌐 Edge Data Collection ]                                |
-|       (CNC-Axis-X1)           (Hydro-Pump 04)           (Ventilation Unit A)      |
-+-----------------------------------------+-----------------------------------------+
-                                          | High-frequency Telemetry / HTTP API
-                                          v
-+-----------------------------------------------------------------------------------+
-|                         [ ⚡ Next.js API Layer ]                                   |
-|   /api/alerts          /api/devices            /api/documents                     |
-+-----------------------------------------+-----------------------------------------+
-                                          |
-        +---------------------------------+---------------------------------+
-        | Real-time threshold triggers                                  | RAG retrieval
-        v                                                                   v
-+-------------------------------+                                 +-----------------+
-|  🤖 Qwen 3.5 Local Engine      | <====== (RAG Augmentation) ===== |  📚 Knowledge   |
-|  (Ollama / 4B param)           |                                 |  (SOP library)  |
-+-------------------------------+                                 +-----------------+
-        |
-        v
-+-----------------------------------------------------------------------------------+
-|                          [ 🖥️ Frontend UI ]                                       |
-|  • Layout (Sidebar / TopNavbar / MobileNav)                                       |
-|  • Dashboard / Device Monitor / Alert Center / RAG Ingestion                      |
-|  • Cluster Nodes (SystemNodeModal)                                                |
-|  • I18n Context Layer (Bilingual)                                                 |
-+-----------------------------------------------------------------------------------+
++-------------------------------------------------------------------+
+|                    [ spark-agent-screen ]                         |
+|  Next.js 15 App Router — BFF layer                                |
+|  +-----------+  +-----------+  +-------------+  +-------------+   |
+|  | Device    |  | Alert     |  | Diagnosis   |  | Knowledge   |   |
+|  | Monitor   |  | Console   |  | Dashboard   |  | Manager     |   |
+|  +-----+-----+  +-----+-----+  +------+------+  +------+------+   |
+|        |              |                |                |          |
+|  +-----+--------------+----------------+----------------+------+   |
+|  |              API Proxy Layer (adapters)                    |   |
+|  |  /api/devices  /api/alerts  /api/alerts/diagnose/[...]    |   |
+|  |  /api/documents  /api/telemetry/sync                       |   |
+|  +-----+--------------+----------------+----------------+------+   |
+|        |              |                |                |          |
+|  +-----+--------------+----------------+----------------+------+   |
+|  |         In-Memory Mock (lib/db.ts)   ← fallback only       |   |
+|  +------------------------------------------------------------+   |
++---------------------------+---------------------------------------+  
+                            | HTTP REST API (BACKEND_ENGINE_URL)
+                            v
++-------------------------------------------------------------------+
+|                    [ spark-agent-engine ]                          |
+|  Spring Boot 4 / Java 25                                          |
+|  MQTT → PostgreSQL → Kafka → AI Diagnosis (Ollama)               |
+|  RAG (pgvector + HNSW) → MCP Tool Server                          |
++-------------------------------------------------------------------+
 ```
+
+Data flow:
+1. The engine ingests device telemetry via MQTT, persists it, evaluates alert rules, and runs AI diagnosis
+2. This UI proxies read/write requests to the engine's REST API
+3. When the engine is unavailable, the built-in mock (`lib/db.ts`) provides demo data with a device drift simulator
+4. WebSocket (STOMP) connects the browser directly to the engine for real-time telemetry updates
 
 ---
 
@@ -98,12 +106,13 @@ The system uses a modular layered architecture isolating data acquisition, infer
 
 ```
 app/                  Next.js App Router — pages + API routes
-├── api/              REST API proxy layer (alerts, devices, documents, telemetry)
-├── layout.tsx        Global layout with fonts, I18nProvider, CSS
-└── page.tsx          Entry point (dynamic import of src/App with ssr: false)
-lib/                  Data layer
-├── db.ts             In-memory DB, device drift simulator, heuristic diagnosis engine
-├── alertI18n.ts      Chinese localization helpers for alert / diagnosis fields
+├── api/              BFF proxy layer (alerts, devices, documents, telemetry)
+├── layout.tsx        Global layout — fonts, I18nProvider, globals.css
+└── page.tsx          Entry point — dynamic import of src/App (ssr: false)
+lib/                  Server-only data layer
+├── adapters/         Engine DTO → UI type mappers (alertAdapter, deviceAdapter)
+├── db.ts             In-memory mock DB + device drift simulator
+├── alertI18n.ts      Chinese localization for alert/diagnosis fields
 └── utils.ts          cn() helper (clsx + tailwind-merge)
 src/                  Client-side application
 ├── App.tsx           Main React app — routing, auth state, API orchestration
@@ -122,11 +131,11 @@ tests/                Vitest test files
 ### Prerequisites
 
 - [Node.js](https://nodejs.org/) v18+
-- **pnpm** (recommended) — install via:
+- **pnpm** (recommended)
 
 ```bash
 npm install -g pnpm
-# or use Node.js Corepack:
+# or via corepack:
 corepack enable
 ```
 
@@ -136,29 +145,41 @@ corepack enable
 pnpm install
 ```
 
-### Configure Backend Engine
+### Run with Backend Engine (recommended)
 
-The diagnosis proxy forwards requests to a local backend engine. Set the URL in `.env.local`:
+Point the UI to a running instance of `spark-agent-engine`:
 
 ```env
-BACKEND_ENGINE_URL="http://localhost:8000"
+# .env.local
+BACKEND_ENGINE_URL="http://localhost:8080"
+BACKEND_SOURCE_DEVICE="engine"
+BACKEND_SOURCE_ALERT="engine"
 ```
 
-The engine runs **Qwen 3.5 (4B)** for deep reasoning and **Qwen3-Embedding (0.6B)** for RAG knowledge retrieval. Without this URL, diagnosis requests will fail with a gateway error.
-
-### Start Dev Server
+Then start:
 
 ```bash
 pnpm dev
 ```
 
-Open `http://localhost:3000`. Log in with `admin` / `admin123456` (or click Quick Fill).
+Open `http://localhost:3000`. Log in with `admin` / `admin123456`.
+
+### Run Standalone (mock mode, no engine needed)
+
+The UI can run entirely self-contained using the built-in in-memory mock (`lib/db.ts`), which includes a device drift simulator that auto-generates telemetry changes and alerts every 5 seconds.
+
+```env
+# .env.local — BACKEND_SOURCE_{DEVICE,ALERT} default to "mock" when unset
+# No BACKEND_ENGINE_URL needed
+```
+
+```bash
+pnpm dev
+```
 
 ---
 
 ## 🧪 Testing
-
-The project uses **Vitest** for unit and integration tests.
 
 ```bash
 # Run all tests
@@ -168,22 +189,21 @@ npx vitest run
 npx vitest run tests/db.test.ts
 ```
 
-Note: there is no `pnpm test` script; use `npx vitest run` directly.
-
 ### Test Coverage
 
-1. **Data Layer & Heuristic Diagnosis** (`tests/db.test.ts`) — validates alert severity classification, device metric constraints, SOP document structure, and diagnosis fallback logic.
-2. **Bilingual i18n Completeness** (`tests/i18n.test.ts`) — scans the translation dictionary ensuring every key has both English and Chinese values with no gaps.
+1. **Data Layer & Heuristic Diagnosis** (`tests/db.test.ts`) — validates alert severity, device constraints, document structure, and diagnosis fallback logic
+2. **Adapter Layer** (`tests/alertAdapter.test.ts`, `tests/deviceAdapter.test.ts`) — engine DTO-to-UI shape mapping with dirty-data fallbacks
+3. **i18n Completeness** (`tests/i18n.test.ts`) — every translation key has both English and Chinese values
 
-> Before submitting PRs: run `pnpm lint` (TypeScript check only) then `npx vitest run`.
+> Before submitting PRs: `pnpm lint` (TypeScript check) → `npx vitest run`.
 
 ---
 
 ## 🎨 UI & Design
 
-- **High-Contrast Industrial Slate Theme**: Dark background (`#0B0E14`) with cyber-teal accents (`#00cfbf`), warning gold (`#ffba43`), and alert red (`#ffb4ab`).
-- **Responsive Layout**: Full sidebar + node monitor on desktop; collapses to mobile bottom nav (native app style) on smaller screens.
-- **Technology**: Next.js 15 App Router, React 19, Tailwind CSS v4, shadcn/ui (base-nova with `@base-ui/react`), Recharts, Framer Motion.
+- **Industrial Slate Theme**: Dark background (`#0B0E14`) with cyber-teal accents (`#00cfbf`), warning gold (`#ffba43`), and alert red (`#ffb4ab`)
+- **Responsive Layout**: Full sidebar on desktop; collapses to mobile bottom nav on smaller screens
+- **Tech Stack**: Next.js 15 App Router, React 19, Tailwind CSS v4, shadcn/ui (base-nova with `@base-ui/react`), Recharts, Framer Motion
 
 ---
 
