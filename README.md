@@ -1,6 +1,6 @@
 <div align="center">
 
-# Spark Agent Screen
+# ⚡ Spark Agent Screen
 
 **Web management console for [spark-agent-engine](https://github.com/prairie-spark-iot/spark-agent-engine).**
 A Next.js 15 Backend-for-Frontend (BFF) and React 19 SPA — from device telemetry monitoring to AI diagnosis review, all in one dark-themed dashboard.

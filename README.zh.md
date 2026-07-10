@@ -1,6 +1,6 @@
 <div align="center">
 
-# Spark Agent Screen
+# ⚡ Spark Agent Screen
 
 **[spark-agent-engine](https://github.com/prairie-spark-iot/spark-agent-engine) 的 Web 管理控制台**
 基于 Next.js 15 BFF 与 React 19 SPA 构建，提供设备遥测监控、告警管理、AI 诊断审核与 RAG 知识库管理等功能。
